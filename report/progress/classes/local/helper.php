@@ -34,11 +34,12 @@ class helper {
      * @param \completion_info $completion Completion information of course.
      * @param string $activityinclude Activity type for filtering.
      * @param string $activityorder Activity sort option.
+     * @param int $activitysection
      * @return array The available activity types and activities array after filtering and sorting.
      * @throws \coding_exception
      */
     public static function get_activities_to_show(\completion_info $completion, string $activityinclude,
-            string $activityorder): array {
+            string $activityorder, int $activitysection = -1): array {
         // Get all activity types.
         $activities = $completion->get_activities();
         $availableactivitytypes = [];
@@ -50,6 +51,13 @@ class helper {
         asort($availableactivitytypes);
         $availableactivitytypes = ['all' => get_string('allactivitiesandresources', 'report_progress')] +
             $availableactivitytypes;
+
+        // Filter activities by section.
+        if ($activitysection > -1) {
+            $activities = array_filter($activities, function($activity) use ($activitysection) {
+                return $activity->section == $activitysection;
+            });
+        }
 
         // Filter activities by type.
         if (!empty($activityinclude) && $activityinclude !== 'all') {
