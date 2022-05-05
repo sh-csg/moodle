@@ -517,6 +517,11 @@ define('HOMEPAGE_MYCOURSES', 3);
 defined('HUB_MOODLEORGHUBURL') || define('HUB_MOODLEORGHUBURL', 'https://stats.moodle.org');
 
 /**
+ * URL of the statistic server public key.
+ */
+defined('HUB_STATSPUBLICKEY') || define('HUB_STATSPUBLICKEY', 'https://moodle.org/static/statspubkey.pem');
+
+/**
  * Moodle mobile app service name
  */
 define('MOODLE_OFFICIAL_MOBILE_SERVICE', 'moodle_mobile_app');
@@ -3897,10 +3902,6 @@ function create_user_record($username, $password, $auth = 'manual') {
         }
     }
 
-    if (!isset($newuser->city)) {
-        $newuser->city = '';
-    }
-
     $newuser->auth = $auth;
     $newuser->username = $username;
 
@@ -5342,8 +5343,7 @@ function remove_course_contents($courseid, $showfeedback = true, array $options 
     fulldelete($CFG->dataroot.'/'.$course->id);
 
     // Delete from cache to reduce the cache size especially makes sense in case of bulk course deletion.
-    $cachemodinfo = cache::make('core', 'coursemodinfo');
-    $cachemodinfo->delete($courseid);
+    course_modinfo::purge_course_cache($courseid);
 
     // Trigger a course content deleted event.
     $event = \core\event\course_content_deleted::create(array(
@@ -8763,8 +8763,9 @@ function format_float($float, $decimalpoints=1, $localized=true, $stripzeros=fal
     }
 
     $result = number_format($float, $decimalpoints, $separator, '');
-    if ($stripzeros) {
+    if ($stripzeros && $decimalpoints > 0) {
         // Remove zeros and final dot if not needed.
+        // However, only do this if there is a decimal point!
         $result = preg_replace('~(' . preg_quote($separator, '~') . ')?0+$~', '', $result);
     }
     return $result;
@@ -9830,7 +9831,7 @@ function get_performance_info() {
         $info['txt'] .= 'Caches used (hits/misses/sets): 0/0/0 ';
     }
 
-    $info['html'] = '<div class="performanceinfo siteinfo container-fluid px-md-0 overflow-auto mt-3">'.$info['html'].'</div>';
+    $info['html'] = '<div class="performanceinfo siteinfo container-fluid px-md-0 overflow-auto pt-3">'.$info['html'].'</div>';
     return $info;
 }
 
@@ -10362,15 +10363,38 @@ function get_home_page() {
     global $CFG;
 
     if (isloggedin() && !isguestuser() && !empty($CFG->defaulthomepage)) {
+        // If dashboard is disabled, home will be set to default page.
+        $defaultpage = get_default_home_page();
         if ($CFG->defaulthomepage == HOMEPAGE_MY) {
-            return HOMEPAGE_MY;
+            if (!empty($CFG->enabledashboard)) {
+                return HOMEPAGE_MY;
+            } else {
+                return $defaultpage;
+            }
         } else if ($CFG->defaulthomepage == HOMEPAGE_MYCOURSES) {
             return HOMEPAGE_MYCOURSES;
         } else {
-            return (int)get_user_preferences('user_home_page_preference', HOMEPAGE_MY);
+            $userhomepage = (int) get_user_preferences('user_home_page_preference', $defaultpage);
+            if (empty($CFG->enabledashboard) && $userhomepage == HOMEPAGE_MY) {
+                // If the user was using the dashboard but it's disabled, return the default home page.
+                $userhomepage = $defaultpage;
+            }
+            return $userhomepage;
         }
     }
     return HOMEPAGE_SITE;
+}
+
+/**
+ * Returns the default home page to display if current one is not defined or can't be applied.
+ * The default behaviour is to return Dashboard if it's enabled or My courses page if it isn't.
+ *
+ * @return int The default home page.
+ */
+function get_default_home_page(): int {
+    global $CFG;
+
+    return !empty($CFG->enabledashboard) ? HOMEPAGE_MY : HOMEPAGE_MYCOURSES;
 }
 
 /**

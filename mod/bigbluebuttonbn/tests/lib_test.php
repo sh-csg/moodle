@@ -123,7 +123,7 @@ class lib_test extends \advanced_testcase {
         logger::log_recording_played_event($instance, 1);
 
         $result = bigbluebuttonbn_user_outline($this->get_course(), $user, $bbactivitycm, $bbactivity);
-        $this->assertStringContainsString('Has joined the meeting or played a recording 2 time(s)', $result->info);
+        $this->assertStringContainsString(get_string('completionview_event_desc', 'mod_bigbluebuttonbn', 2), $result->info);
     }
 
     /**
@@ -149,7 +149,7 @@ class lib_test extends \advanced_testcase {
         bigbluebuttonbn_user_complete($this->get_course(), $user, $bbactivitycm, $bbactivity);
         $output = ob_get_contents();
         ob_end_clean();
-        $this->assertStringContainsString('Has joined the meeting or played a recording', $output);
+        $this->assertStringContainsString(get_string('completionview_event_desc', 'mod_bigbluebuttonbn', 2), $output);
     }
 
     /**
@@ -198,7 +198,6 @@ class lib_test extends \advanced_testcase {
      * @param int $user
      * @param int $group
      * @return array|void
-     * @throws \moodle_exception
      */
     protected function prepare_for_recent_activity_array($date, $user, $group) {
         // Same algorithm as in cource/recent.php, but stops at the first bbb activity.
@@ -392,18 +391,28 @@ class lib_test extends \advanced_testcase {
     }
 
     /**
-     * Check user data
+     * Reset user data
      *
      * @covers ::bigbluebuttonbn_reset_userdata
      */
     public function test_bigbluebuttonbn_reset_userdata() {
+        global $DB;
         $this->resetAfterTest();
         $data = new stdClass();
+        $user = $this->getDataGenerator()->create_user();
+
         list($bbactivitycontext, $bbactivitycm, $bbactivity) = $this->create_instance();
+        $this->getDataGenerator()->enrol_user($user->id, $this->course->id);
+
+        logger::log_meeting_joined_event(instance::get_from_instanceid($bbactivity->id), 0);
         $data->courseid = $this->get_course()->id;
         $data->reset_bigbluebuttonbn_tags = true;
+        $data->reset_bigbluebuttonbn_logs = true;
         $data->course = $bbactivity->course;
+        // Add and Join.
+        $this->assertCount(2, $DB->get_records('bigbluebuttonbn_logs', ['bigbluebuttonbnid' => $bbactivity->id]));
         $results = bigbluebuttonbn_reset_userdata($data);
+        $this->assertCount(0, $DB->get_records('bigbluebuttonbn_logs', ['bigbluebuttonbnid' => $bbactivity->id]));
         $this->assertEquals([
             'component' => 'BigBlueButton',
             'item' => 'Deleted tags',
@@ -411,6 +420,63 @@ class lib_test extends \advanced_testcase {
         ],
             $results[0]
         );
+    }
+
+    /**
+     * Reset user data in a course and checks it does not delete logs elsewhere
+     *
+     * @covers ::bigbluebuttonbn_reset_userdata
+     */
+    public function test_bigbluebuttonbn_reset_userdata_in_a_course() {
+        global $DB;
+        $this->resetAfterTest();
+        $data = new stdClass();
+        $user = $this->getDataGenerator()->create_user();
+
+        list($bbactivitycontext, $bbactivitycm, $bbactivity) = $this->create_instance();
+        $this->getDataGenerator()->enrol_user($user->id, $this->course->id);
+        logger::log_meeting_joined_event(instance::get_from_instanceid($bbactivity->id), 0);
+
+        // Now create another activity in a course and add a couple of logs.
+        // Aim is to make sure that only logs from one course are deleted.
+        $course1 = $this->getDataGenerator()->create_course();
+        list($bbactivitycontext1, $bbactivitycm1, $bbactivity1) = $this->create_instance($course1);
+        logger::log_meeting_joined_event(instance::get_from_instanceid($bbactivity1->id), 0);
+
+        $data->courseid = $this->get_course()->id;
+        $data->reset_bigbluebuttonbn_tags = true;
+        $data->reset_bigbluebuttonbn_logs = true;
+        $data->course = $bbactivity->course;
+        // Add and Join.
+        $this->assertCount(2, $DB->get_records('bigbluebuttonbn_logs', ['bigbluebuttonbnid' => $bbactivity->id]));
+        $this->assertCount(2, $DB->get_records('bigbluebuttonbn_logs', ['bigbluebuttonbnid' => $bbactivity1->id]));
+        bigbluebuttonbn_reset_userdata($data);
+        $this->assertCount(0, $DB->get_records('bigbluebuttonbn_logs', ['bigbluebuttonbnid' => $bbactivity->id]));
+        $this->assertCount(2, $DB->get_records('bigbluebuttonbn_logs', ['bigbluebuttonbnid' => $bbactivity1->id]));
+    }
+
+    /**
+     * Reset user data in a course but do not delete logs
+     *
+     * @covers ::bigbluebuttonbn_reset_userdata
+     */
+    public function test_bigbluebuttonbn_reset_userdata_logs_not_deleted() {
+        global $DB;
+        $this->resetAfterTest();
+        $data = new stdClass();
+        $user = $this->getDataGenerator()->create_user();
+
+        list($bbactivitycontext, $bbactivitycm, $bbactivity) = $this->create_instance();
+        $this->getDataGenerator()->enrol_user($user->id, $this->course->id);
+        logger::log_meeting_joined_event(instance::get_from_instanceid($bbactivity->id), 0);
+
+        $data->courseid = $this->get_course()->id;
+        $data->reset_bigbluebuttonbn_logs = false;
+        $data->course = $bbactivity->course;
+        // Add and Join.
+        $this->assertCount(2, $DB->get_records('bigbluebuttonbn_logs', ['bigbluebuttonbnid' => $bbactivity->id]));
+        bigbluebuttonbn_reset_userdata($data);
+        $this->assertCount(2, $DB->get_records('bigbluebuttonbn_logs', ['bigbluebuttonbnid' => $bbactivity->id]));
     }
 
     /**
@@ -439,17 +505,6 @@ class lib_test extends \advanced_testcase {
             '{"updated":false},"completion":{"updated":false}}',
             json_encode($result)
         );
-    }
-
-    /**
-     * Check font awesome icon map
-     *
-     * @covers ::mod_bigbluebuttonbn_get_fontawesome_icon_map
-     */
-    public function test_mod_bigbluebuttonbn_get_fontawesome_icon_map() {
-        $this->resetAfterTest();
-        $this->assertEquals(['mod_bigbluebuttonbn:icon' => 'icon-bigbluebutton'],
-            mod_bigbluebuttonbn_get_fontawesome_icon_map());
     }
 
     /**

@@ -1416,13 +1416,13 @@ class block_manager {
                 $str,
                 [
                     'class' => 'editing_delete',
-                    'data-confirmation' => 'modal',
-                    'data-confirmation-title-str' => json_encode(['deletecheck_modal', 'block']),
-                    'data-confirmation-question-str' => json_encode(['deleteblockcheck', 'block', $blocktitle]),
-                    'data-confirmation-yes-button-str' => json_encode(['delete', 'core']),
-                    'data-confirmation-toast' => 'true',
-                    'data-confirmation-toast-confirmation-str' => json_encode(['deleteblockinprogress', 'block', $blocktitle]),
-                    'data-confirmation-destination' => $deleteconfirmationurl->out(false),
+                    'data-modal' => 'confirmation',
+                    'data-modal-title-str' => json_encode(['deletecheck_modal', 'block']),
+                    'data-modal-content-str' => json_encode(['deleteblockcheck', 'block', $blocktitle]),
+                    'data-modal-yes-button-str' => json_encode(['delete', 'core']),
+                    'data-modal-toast' => 'true',
+                    'data-modal-toast-confirmation-str' => json_encode(['deleteblockinprogress', 'block', $blocktitle]),
+                    'data-modal-destination' => $deleteconfirmationurl->out(false),
                 ]
             );
         }
@@ -1894,7 +1894,6 @@ class block_manager {
             $editpage->navbar->add($block->get_title());
             $editpage->navbar->add(get_string('configuration'));
             echo $output->header();
-            echo $output->heading($strheading, 2);
             $mform->display();
             echo $output->footer();
             exit;
@@ -2686,8 +2685,7 @@ function blocks_add_default_system_blocks() {
 
     $page->blocks->add_blocks([
         BLOCK_POS_RIGHT => [
-            'private_files',
-            'badges',
+            'recentlyaccesseditems',
         ],
         'content' => [
             'timeline',

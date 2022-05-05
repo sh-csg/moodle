@@ -32,7 +32,7 @@ class helper {
      *   - name. To define the preset name.
      *   - comments. To change the comments field.
      *   - author. To update the author field.
-     *   - iscore. Whether the preset is a core preset or not.
+     *   - iscore. Whether the preset is a core preset or not. Valid values on \core_adminpresets\manager class.
      * @return int The identifier of the preset created.
      */
     public static function create_preset(array $data): int {
@@ -41,7 +41,13 @@ class helper {
         $name = array_key_exists('name', $data) ? $data['name'] : '';
         $comments = array_key_exists('comments', $data) ? $data['comments'] : '';
         $author = array_key_exists('author', $data) ? $data['author'] : fullname($USER);
-        $iscore = array_key_exists('iscore', $data) ? $data['iscore'] : 0;
+        $iscore = array_key_exists('iscore', $data) ? $data['iscore'] : manager::NONCORE_PRESET;
+
+        // Validate iscore value.
+        $allowed = [manager::NONCORE_PRESET, manager::STARTER_PRESET, manager::FULL_PRESET];
+        if (!in_array($iscore, $allowed)) {
+            $iscore = manager::NONCORE_PRESET;
+        }
 
         $preset = [
             'userid' => $USER->id,
@@ -168,7 +174,7 @@ class helper {
         $data = [
             'name' => get_string('starterpreset', 'core_adminpresets'),
             'comments' => get_string('starterpresetdescription', 'core_adminpresets'),
-            'iscore' => 1,
+            'iscore' => manager::STARTER_PRESET,
         ];
         $presetid = static::create_preset($data);
 
@@ -181,13 +187,11 @@ class helper {
         static::add_item($presetid, 'enableanalytics', '0');
         static::add_item($presetid, 'enabled', '0', 'core_competency');
         static::add_item($presetid, 'pushcourseratingstouserplans', '0', 'core_competency');
-
         static::add_item($presetid, 'showdataretentionsummary', '0', 'tool_dataprivacy');
         static::add_item($presetid, 'forum_maxattachments', '3');
-        static::add_item($presetid, 'customusermenuitems', 'profile,moodle|/user/profile.php
-grades,grades|/grade/report/mygrades.php
-calendar,core_calendar|/calendar/view.php?view=month
-privatefiles,moodle|/user/files.php');
+        static::add_item($presetid, 'guestloginbutton', '0');
+        // Set Activity chooser tabs to "Starred, All, Recommended".
+        static::add_item($presetid, 'activitychoosertabmode', '1');
 
         // Modules: Hide chat, database, external tool (lti), IMS content package (imscp), lesson, SCORM, survey, wiki, workshop.
         static::add_plugin($presetid, 'mod', 'chat', false);
@@ -205,8 +209,9 @@ privatefiles,moodle|/user/files.php');
         static::add_plugin($presetid, 'availability', 'profile', false);
 
         // Blocks: Hide Activities, Blog menu, Blog tags, Comments, Course completion status, Courses, Flickr,
-        // Global search, Latest badges, Learning plans, Logged in user, Login, Main menu, Mentees, Network servers, Private files,
-        // Recent blog entries, Search forums, Section links, Social activities,Tags, YouTube.
+        // Global search, Latest badges, Learning plans, Logged in user, Login, Main menu, Mentees, Network servers, Online users,
+        // Private files, Recent blog entries, Recently accessed courses, Search forums, Section links, Social activities,
+        // Starred courses, Tags, YouTube.
         // Hidden by default: Course/site summary, RSS feeds, Self completion, Feedback.
         static::add_plugin($presetid, 'block', 'activity_modules', false);
         static::add_plugin($presetid, 'block', 'blog_menu', false);
@@ -234,6 +239,9 @@ privatefiles,moodle|/user/files.php');
         static::add_plugin($presetid, 'block', 'tags', false);
         static::add_plugin($presetid, 'block', 'tag_youtube', false);
         static::add_plugin($presetid, 'block', 'feedback', false);
+        static::add_plugin($presetid, 'block', 'online_users', false);
+        static::add_plugin($presetid, 'block', 'recentlyaccessedcourses', false);
+        static::add_plugin($presetid, 'block', 'starredcourses', false);
 
         // Course formats: Disable Social format.
         static::add_plugin($presetid, 'format', 'social', false);
@@ -241,8 +249,9 @@ privatefiles,moodle|/user/files.php');
         // Data formats: Disable Javascript Object Notation (.json).
         static::add_plugin($presetid, 'dataformat', 'json', false);
 
-        // Enrolments: Disable Cohort sync.
+        // Enrolments: Disable Cohort sync, Guest access.
         static::add_plugin($presetid, 'enrol', 'cohort', false);
+        static::add_plugin($presetid, 'enrol', 'guest', false);
 
         // Filter: Disable MathJax, Activity names auto-linking.
         static::add_plugin($presetid, 'filter', 'mathjaxloader', TEXTFILTER_DISABLED);
@@ -253,16 +262,14 @@ privatefiles,moodle|/user/files.php');
         static::add_plugin($presetid, 'qbehaviour', 'deferredcbm', false);
         static::add_plugin($presetid, 'qbehaviour', 'immediatecbm', false);
 
-        // Question types: Disable Calculated, Calculated multichoice, Calculated simple, Description, Drag and drop markers,
-        // Drag and drop onto image, Embedded answers (Cloze), Essay, Numerical, Random short-answer matching.
+        // Question types: Disable Calculated, Calculated multichoice, Calculated simple, Drag and drop markers,
+        // Drag and drop onto image, Embedded answers (Cloze), Numerical, Random short-answer matching.
         static::add_plugin($presetid, 'qtype', 'calculated', false);
         static::add_plugin($presetid, 'qtype', 'calculatedmulti', false);
         static::add_plugin($presetid, 'qtype', 'calculatedsimple', false);
-        static::add_plugin($presetid, 'qtype', 'description', false);
         static::add_plugin($presetid, 'qtype', 'ddmarker', false);
         static::add_plugin($presetid, 'qtype', 'ddimageortext', false);
         static::add_plugin($presetid, 'qtype', 'multianswer', false);
-        static::add_plugin($presetid, 'qtype', 'essay', false);
         static::add_plugin($presetid, 'qtype', 'numerical', false);
         static::add_plugin($presetid, 'qtype', 'randomsamatch', false);
 
@@ -278,7 +285,7 @@ privatefiles,moodle|/user/files.php');
         $data = [
             'name' => get_string('fullpreset', 'core_adminpresets'),
             'comments' => get_string('fullpresetdescription', 'core_adminpresets'),
-            'iscore' => 1,
+            'iscore' => manager::FULL_PRESET,
         ];
         $presetid = static::create_preset($data);
 
@@ -291,15 +298,11 @@ privatefiles,moodle|/user/files.php');
         static::add_item($presetid, 'enableanalytics', '1');
         static::add_item($presetid, 'enabled', '1', 'core_competency');
         static::add_item($presetid, 'pushcourseratingstouserplans', '1', 'core_competency');
-
         static::add_item($presetid, 'showdataretentionsummary', '1', 'tool_dataprivacy');
         static::add_item($presetid, 'forum_maxattachments', '9');
-        // In that case, the indentation coding style can't follow the rules to guarantee the setting value is created properly.
-        static::add_item($presetid, 'customusermenuitems', 'profile,moodle|/user/profile.php
-grades,grades|/grade/report/mygrades.php
-calendar,core_calendar|/calendar/view.php?view=month
-privatefiles,moodle|/user/files.php'
-            );
+        static::add_item($presetid, 'guestloginbutton', '1');
+        // Set Activity chooser tabs to the default value ("Starred, All, Activities, Resources, Recommended").
+        static::add_item($presetid, 'activitychoosertabmode', '0');
 
         // Modules: Enable chat, database, external tool (lti), IMS content package (imscp), lesson, SCORM, survey, wiki, workshop.
         static::add_plugin($presetid, 'mod', 'chat', true);
@@ -317,8 +320,9 @@ privatefiles,moodle|/user/files.php'
         static::add_plugin($presetid, 'availability', 'profile', true);
 
         // Blocks: Enable Activities, Blog menu, Blog tags, Comments, Course completion status, Courses, Flickr,
-        // Global search, Latest badges, Learning plans, Logged in user, Login, Main menu, Mentees, Network servers, Private files,
-        // Recent blog entries, Search forums, Section links, Social activities,Tags, YouTube.
+        // Global search, Latest badges, Learning plans, Logged in user, Login, Main menu, Mentees, Network servers, Online users,
+        // Private files, Recent blog entries, Recently accessed courses, Search forums, Section links, Social activities,
+        // Starred courses, Tags, YouTube.
         // Hidden by default: Course/site summary, RSS feeds, Self completion, Feedback.
         static::add_plugin($presetid, 'block', 'activity_modules', true);
         static::add_plugin($presetid, 'block', 'blog_menu', true);
@@ -341,6 +345,9 @@ privatefiles,moodle|/user/files.php'
         static::add_plugin($presetid, 'block', 'section_links', true);
         static::add_plugin($presetid, 'block', 'social_activities', true);
         static::add_plugin($presetid, 'block', 'tags', true);
+        static::add_plugin($presetid, 'block', 'online_users', true);
+        static::add_plugin($presetid, 'block', 'recentlyaccessedcourses', true);
+        static::add_plugin($presetid, 'block', 'starredcourses', true);
 
         // Course formats: Enable Social format.
         static::add_plugin($presetid, 'format', 'social', true);
@@ -348,8 +355,9 @@ privatefiles,moodle|/user/files.php'
         // Data formats: Enable Javascript Object Notation (.json).
         static::add_plugin($presetid, 'dataformat', 'json', true);
 
-        // Enrolments: Enable Cohort sync.
+        // Enrolments: Enable Cohort sync, Guest access.
         static::add_plugin($presetid, 'enrol', 'cohort', true);
+        static::add_plugin($presetid, 'enrol', 'guest', true);
 
         // Filter: Enable MathJax, Activity names auto-linking.
         static::add_plugin($presetid, 'filter', 'mathjaxloader', TEXTFILTER_ON);
@@ -360,16 +368,14 @@ privatefiles,moodle|/user/files.php'
         static::add_plugin($presetid, 'qbehaviour', 'deferredcbm', true);
         static::add_plugin($presetid, 'qbehaviour', 'immediatecbm', true);
 
-        // Question types: Enable Calculated, Calculated multichoice, Calculated simple, Description, Drag and drop markers,
-        // Drag and drop onto image, Embedded answers (Cloze), Essay, Numerical, Random short-answer matching.
+        // Question types: Enable Calculated, Calculated multichoice, Calculated simple, Drag and drop markers,
+        // Drag and drop onto image, Embedded answers (Cloze), Numerical, Random short-answer matching.
         static::add_plugin($presetid, 'qtype', 'calculated', true);
         static::add_plugin($presetid, 'qtype', 'calculatedmulti', true);
         static::add_plugin($presetid, 'qtype', 'calculatedsimple', true);
-        static::add_plugin($presetid, 'qtype', 'description', true);
         static::add_plugin($presetid, 'qtype', 'ddmarker', true);
         static::add_plugin($presetid, 'qtype', 'ddimageortext', true);
         static::add_plugin($presetid, 'qtype', 'multianswer', true);
-        static::add_plugin($presetid, 'qtype', 'essay', true);
         static::add_plugin($presetid, 'qtype', 'numerical', true);
         static::add_plugin($presetid, 'qtype', 'randomsamatch', true);
 

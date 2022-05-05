@@ -55,6 +55,12 @@ if ($badge->is_active() || $badge->is_locked()) {
     redirect($return);
 }
 
+// Make sure the criteria type is accepted.
+$accepted = $badge->get_accepted_criteria();
+if (!in_array($type, $accepted)) {
+    redirect($return);
+}
+
 if ($badge->type == BADGE_TYPE_COURSE) {
     require_login($badge->courseid);
     $course = get_course($badge->courseid);
@@ -73,7 +79,9 @@ $PAGE->set_context($context);
 $PAGE->set_url('/badges/criteria_settings.php', $urlparams);
 $PAGE->set_heading($heading);
 $PAGE->set_title($badge->name);
-$PAGE->navbar->add($badge->name, new moodle_url('overview.php', array('id' => $badge->id)))->add(get_string('criteria_' . $type, 'badges'));
+$PAGE->navbar->add($badge->name, new moodle_url('overview.php', array('id' => $badge->id)))
+    ->add(get_string('bcriteria', 'badges'), new moodle_url('criteria.php', ['id' => $badge->id]))
+    ->add(get_string('criteria_' . $type, 'badges'));
 
 $cparams = array('criteriatype' => $type, 'badgeid' => $badge->id);
 if ($edit) {

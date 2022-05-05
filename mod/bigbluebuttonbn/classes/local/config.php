@@ -64,8 +64,7 @@ class config {
             'waitformoderator_cache_ttl' => '60',
             'userlimit_default' => '0',
             'userlimit_editable' => false,
-            'preuploadpresentation_enabled' => false,
-            'sendnotifications_enabled' => false,
+            'preuploadpresentation_editable' => false,
             'recordingready_enabled' => false,
             'recordingstatus_enabled' => false,
             'meetingevents_enabled' => false,
@@ -81,7 +80,6 @@ class config {
             'recording_default' => true,
             'recording_editable' => true,
             'recording_refresh_period' => recording::RECORDING_REFRESH_DEFAULT_PERIOD,
-            'recording_icons_enabled' => true,
             'recording_all_from_start_default' => false,
             'recording_all_from_start_editable' => false,
             'recording_hide_button_default' => false,
@@ -107,12 +105,8 @@ class config {
             'disablenote_editable' => true,
             'hideuserlist_default' => false,
             'hideuserlist_editable' => true,
-            'lockedlayout_default' => false,
-            'lockedlayout_editable' => true,
-            'lockonjoin_default' => false,
-            'lockonjoin_editable' => true,
-            'lockonjoinconfigurable_default' => false,
-            'lockonjoinconfigurable_editable' => true,
+            'lockonjoin_default' => true,
+            'lockonjoin_editable' => false,
             'welcome_default' => '',
         ];
     }
@@ -123,7 +117,7 @@ class config {
      * @param string $setting
      * @return string
      */
-    protected static function defaultvalue($setting) {
+    public static function defaultvalue($setting) {
         $defaultvalues = self::defaultvalues();
         if (!array_key_exists($setting, $defaultvalues)) {
             return null;
@@ -181,8 +175,7 @@ class config {
                'waitformoderator_editable' => self::get('waitformoderator_editable'),
                'userlimit_default' => self::get('userlimit_default'),
                'userlimit_editable' => self::get('userlimit_editable'),
-               'preuploadpresentation_enabled' => self::get('preuploadpresentation_enabled'),
-               'sendnotifications_enabled' => self::get('sendnotifications_enabled'),
+               'preuploadpresentation_editable' => self::get('preuploadpresentation_editable'),
                'recordings_enabled' => self::get('recordings_enabled'),
                'meetingevents_enabled' => self::get('meetingevents_enabled'),
                'recordings_deleted_default' => self::get('recordings_deleted_default'),
@@ -194,7 +187,6 @@ class config {
                'recording_default' => self::get('recording_default'),
                'recording_editable' => self::get('recording_editable'),
                'recording_refresh_period' => self::get('recording_refresh_period'),
-               'recording_icons_enabled' => self::get('recording_icons_enabled'),
                'recording_all_from_start_default' => self::get('recording_all_from_start_default'),
                'recording_all_from_start_editable' => self::get('recording_all_from_start_editable'),
                'recording_hide_button_default' => self::get('recording_hide_button_default'),
@@ -219,13 +211,10 @@ class config {
                'disablenote_default' => self::get('disablenote_default'),
                'hideuserlist_editable' => self::get('hideuserlist_editable'),
                'hideuserlist_default' => self::get('hideuserlist_default'),
-               'lockedlayout_editable' => self::get('lockedlayout_editable'),
-               'lockedlayout_default' => self::get('lockedlayout_default'),
                'lockonjoin_editable' => self::get('lockonjoin_editable'),
                'lockonjoin_default' => self::get('lockonjoin_default'),
-               'lockonjoinconfigurable_editable' => self::get('lockonjoinconfigurable_editable'),
-               'lockonjoinconfigurable_default' => self::get('lockonjoinconfigurable_default'),
                'welcome_default' => self::get('welcome_default'),
+               'welcome_editable' => self::get('welcome_editable'),
         ];
     }
 

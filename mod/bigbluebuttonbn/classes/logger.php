@@ -59,6 +59,17 @@ class logger {
     /** @var string The bigbluebuttonbn Summary event */
     public const EVENT_SUMMARY = 'Summary';
 
+    /** @var string This is a specific log to mark this log as upgraded: used only in the upgrade process from 2.4
+     *
+     * Note: Migrated event name change: once a log has been migrated we mark
+     * it as migrated by changing its log name. This will help to recover
+     * manually if we have an issue in the migration process.
+     */
+    public const EVENT_IMPORT_MIGRATED = 'import-migrated';
+
+    /** @var string This is a specific log to mark this log as upgraded: used only in the upgrade process from 2.4 */
+    public const EVENT_CREATE_MIGRATED = 'create-migrated';
+
     /** @var string The bigbluebuttonbn meeting_start event */
     public const EVENT_MEETING_START = 'meeting_start';
 
@@ -79,8 +90,6 @@ class logger {
      * @param array|null $filters
      * @param int|null $timestart
      * @return array
-     * @throws \coding_exception
-     * @throws \dml_exception
      */
     public static function get_user_completion_logs(
         instance $instance,
@@ -102,8 +111,6 @@ class logger {
      * @param array|null $filters
      * @param int|null $timestart
      * @return array
-     * @throws \coding_exception
-     * @throws \dml_exception
      */
     public static function get_user_completion_logs_with_userfields(
         instance $instance,
@@ -138,8 +145,6 @@ EOF;
      * @param array|null $filters
      * @param int|null $timestart
      * @return int
-     * @throws \coding_exception
-     * @throws \dml_exception
      */
     public static function get_user_completion_logs_max_timestamp(
         instance $instance,
@@ -164,8 +169,6 @@ EOF;
      * @param int|null $timestart
      * @param string|null $logtablealias
      * @return array
-     * @throws \coding_exception
-     * @throws \dml_exception
      */
     protected static function get_user_completion_sql_params(instance $instance, ?int $userid, ?array $filters, ?int $timestart,
         ?string $logtablealias = null) {
@@ -371,7 +374,6 @@ EOF;
      * @param array $overrides
      * @param string|null $meta
      * @return bool
-     * @throws \dml_exception
      */
     protected static function raw_log(
         string $event,

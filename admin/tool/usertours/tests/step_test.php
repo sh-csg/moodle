@@ -14,13 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Tests for step.
- *
- * @package    tool_usertours
- * @copyright  2016 Andrew Nicols <andrew@nicols.co.uk>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
+namespace tool_usertours;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -34,7 +28,7 @@ require_once($CFG->libdir . '/formslib.php');
  * @copyright  2016 Andrew Nicols <andrew@nicols.co.uk>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class step_testcase extends advanced_testcase {
+class step_test extends \advanced_testcase {
 
     /**
      * @var moodle_database
@@ -828,6 +822,7 @@ class step_testcase extends advanced_testcase {
      * Ensure that the get_step_image_from_input function replace PIXICON placeholder with the correct images correctly.
      */
     public function test_get_step_image_from_input() {
+        // Test step content with single image.
         $stepcontent = '@@PIXICON::tour/tour_mycourses::tool_usertours@@<br>Test';
         $stepcontent = \tool_usertours\step::get_step_image_from_input($stepcontent);
 
@@ -836,6 +831,16 @@ class step_testcase extends advanced_testcase {
         $this->assertStringEndsWith('Test', $stepcontent);
         $this->assertStringNotContainsString('PIXICON', $stepcontent);
 
+        // Test step content with multiple images.
+        $stepcontent = '@@PIXICON::tour/tour_mycourses::tool_usertours@@<br>Test<br>@@PIXICON::tour/tour_myhomepage::tool_usertours@@';
+        $stepcontent = \tool_usertours\step::get_step_image_from_input($stepcontent);
+        // If the format is correct, PIXICON placeholder will be replaced with the img tag.
+        $this->assertStringStartsWith('<img', $stepcontent);
+        // We should have 2 img tags here.
+        $this->assertEquals(2, substr_count($stepcontent, '<img'));
+        $this->assertStringNotContainsString('PIXICON', $stepcontent);
+
+        // Test step content with incorrect format.
         $stepcontent = '@@PIXICON::tour/tour_mycourses<br>Test';
         $stepcontent = \tool_usertours\step::get_step_image_from_input($stepcontent);
 

@@ -198,6 +198,7 @@ class api {
             'tool_mobile_androidappid' => get_config('tool_mobile', 'androidappid'),
             'tool_mobile_setuplink' => clean_param(get_config('tool_mobile', 'setuplink'), PARAM_URL),
             'tool_mobile_qrcodetype' => clean_param(get_config('tool_mobile', 'qrcodetype'), PARAM_INT),
+            'supportpage' => clean_param($CFG->supportpage, PARAM_URL),
         );
 
         $typeoflogin = get_config('tool_mobile', 'typeoflogin');
@@ -337,6 +338,10 @@ class api {
         if (empty($section) || $section === 'graceperiodsettings') {
             $settings->coursegraceperiodafter = $CFG->coursegraceperiodafter;
             $settings->coursegraceperiodbefore = $CFG->coursegraceperiodbefore;
+        }
+
+        if (empty($section) || $section === 'navigation') {
+            $settings->enabledashboard = $CFG->enabledashboard;
         }
 
         return $settings;

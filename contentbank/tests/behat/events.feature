@@ -5,7 +5,10 @@ Feature: Confirm content bank events are triggered
   I need to be able to check triggered events
 
   Background:
-    Given I log in as "admin"
+    Given the following "blocks" exist:
+      | blockname     | contextlevel | reference | pagetypepattern | defaultregion |
+      | private_files | System       | 1         | my-index        | side-post     |
+    And I log in as "admin"
     And I navigate to "H5P > Manage H5P content types" in site administration
     And I upload "h5p/tests/fixtures/filltheblanks.h5p" file to "H5P content type" filemanager
     And I click on "Upload H5P content types" "button" in the "#fitem_id_uploadlibraries" "css_element"
@@ -58,8 +61,8 @@ Feature: Confirm content bank events are triggered
     And I expand "Site pages" node
     And I click on "Content bank" "link"
     And I click on "Existing" "link"
-    And I open the action menu in "region-main-settings-menu" "region"
-    When I choose "Delete" in the open action menu
+    And  I click on "More" "button"
+    When I click on "Delete" "link"
     And I click on "Delete" "button" in the "Delete content" "dialogue"
     And I navigate to "Reports > Live logs" in site administration
     Then I should see "Content deleted"
@@ -71,8 +74,8 @@ Feature: Confirm content bank events are triggered
     And I expand "Site pages" node
     And I click on "Content bank" "link"
     And I click on "Existing" "link"
-    And I open the action menu in "region-main-settings-menu" "region"
-    When I choose "Rename" in the open action menu
+    And  I click on "More" "button"
+    When I click on "Rename" "link"
     And I set the field "Content name" to "New name"
     And I click on "Rename" "button"
     And I navigate to "Reports > Live logs" in site administration

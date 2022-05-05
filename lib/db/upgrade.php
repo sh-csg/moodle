@@ -2764,7 +2764,7 @@ function xmldb_main_upgrade($oldversion) {
         // Set the description field to HTML format for the Default course category.
         $category = $DB->get_record('course_categories', ['id' => 1]);
 
-        if ($category->descriptionformat == FORMAT_MOODLE) {
+        if (!empty($category) && $category->descriptionformat == FORMAT_MOODLE) {
             // Format should be changed only if it's still set to FORMAT_MOODLE.
             if (!is_null($category->description)) {
                 // If description is not empty, format the content to HTML.
@@ -3541,8 +3541,24 @@ privatefiles,moodle|/user/files.php';
     if ($oldversion < 2022011100.01) {
         // The following blocks have been hidden by default, so they shouldn't be enabled in the Full core preset: Course/site
         // summary, RSS feeds, Self completion and Feedback.
-        $params = ['name' => get_string('fullpreset', 'core_adminpresets'), 'iscore' => 1];
-        $fullpreset = $DB->get_record('adminpresets', $params);
+        $params = ['name' => get_string('fullpreset', 'core_adminpresets')];
+        $fullpreset = $DB->get_record_select('adminpresets', 'name = :name and iscore > 0', $params);
+
+        if (!$fullpreset) {
+            // Full admin preset might have been created using the English name.
+            $name = get_string_manager()->get_string('fullpreset', 'core_adminpresets', null, 'en');
+            $params['name'] = $name;
+            $fullpreset = $DB->get_record_select('adminpresets', 'name = :name and iscore > 0', $params);
+        }
+        if (!$fullpreset) {
+            // We tried, but we didn't find full by name. Let's find a core preset that sets 'usecomments' setting to 1.
+            $sql = "SELECT preset.*
+                      FROM {adminpresets} preset
+                INNER JOIN {adminpresets_it} it ON preset.id = it.adminpresetid
+                     WHERE it.name = :name AND it.value = :value AND preset.iscore > 0";
+            $params = ['name' => 'usecomments', 'value' => '1'];
+            $fullpreset = $DB->get_record_sql($sql, $params);
+        }
 
         if ($fullpreset) {
             $blocknames = ['course_summary', 'feedback', 'rss_client', 'selfcompletion'];
@@ -3651,6 +3667,8 @@ privatefiles,moodle|/user/files.php';
                 // Save locked.
                 if ($locked) {
                     set_config($provider.'_provider_'.$prefname.'_locked', 1, 'message');
+                } else {
+                    set_config($provider.'_provider_'.$prefname.'_locked', 0, 'message');
                 }
                 // Remove old value.
                 unset_config($provider.'_provider_'.$prefname.'_permitted', 'message');
@@ -3908,14 +3926,182 @@ privatefiles,moodle|/user/files.php';
     }
 
     if ($oldversion < 2022020200.02) {
-        // Next, split question records into the new tables.
-        upgrade_migrate_question_table();
+        // Define a new temporary field in the question_bank_entries tables.
+        // Creating temporary field questionid to populate the data in question version table.
+        // This will make sure the appropriate question id is inserted the version table without making any complex joins.
+        $table = new xmldb_table('question_bank_entries');
+        $field = new xmldb_field('questionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_TYPE_INTEGER);
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        $transaction = $DB->start_delegated_transaction();
+        upgrade_set_timeout(3600);
+        // Create the data for the question_bank_entries table with, including the new temporary field.
+        $sql = <<<EOF
+            INSERT INTO {question_bank_entries}
+                (questionid, questioncategoryid, idnumber, ownerid)
+            SELECT id, category, idnumber, createdby
+            FROM {question} q
+            EOF;
+
+        // Inserting question_bank_entries data.
+        $DB->execute($sql);
+
+        $transaction->allow_commit();
+
         // Main savepoint reached.
         upgrade_main_savepoint(true, 2022020200.02);
     }
 
-    // Finally, drop fields from question table.
     if ($oldversion < 2022020200.03) {
+        $transaction = $DB->start_delegated_transaction();
+        upgrade_set_timeout(3600);
+        // Create the question_versions using that temporary field.
+        $sql = <<<EOF
+            INSERT INTO {question_versions}
+                (questionbankentryid, questionid, status)
+            SELECT
+                qbe.id,
+                q.id,
+                CASE
+                    WHEN q.hidden > 0 THEN 'hidden'
+                    ELSE 'ready'
+                END
+            FROM {question_bank_entries} qbe
+            INNER JOIN {question} q ON qbe.questionid = q.id
+            EOF;
+
+        // Inserting question_versions data.
+        $DB->execute($sql);
+
+        $transaction->allow_commit();
+
+        // Dropping temporary field questionid.
+        $table = new xmldb_table('question_bank_entries');
+        $field = new xmldb_field('questionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_TYPE_INTEGER);
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022020200.03);
+    }
+
+    if ($oldversion < 2022020200.04) {
+        $transaction = $DB->start_delegated_transaction();
+        upgrade_set_timeout(3600);
+        // Create the base data for the random questions in the set_references table.
+        // This covers most of the hard work in one go.
+        $concat = $DB->sql_concat("'{\"questioncategoryid\":\"'", 'q.category', "'\",\"includingsubcategories\":\"'",
+            'qs.includingsubcategories', "'\"}'");
+        $sql = <<<EOF
+            INSERT INTO {question_set_references}
+            (usingcontextid, component, questionarea, itemid, questionscontextid, filtercondition)
+            SELECT
+                c.id,
+                'mod_quiz',
+                'slot',
+                qs.id,
+                qc.contextid,
+                $concat
+            FROM {question} q
+            INNER JOIN {quiz_slots} qs on q.id = qs.questionid
+            INNER JOIN {course_modules} cm ON cm.instance = qs.quizid AND cm.module = :quizmoduleid
+            INNER JOIN {context} c ON cm.id = c.instanceid AND c.contextlevel = :contextmodule
+            INNER JOIN {question_categories} qc ON qc.id = q.category
+            WHERE q.qtype = :random
+            EOF;
+
+        // Inserting question_set_references data.
+        $DB->execute($sql, [
+            'quizmoduleid' => $DB->get_field('modules', 'id', ['name' => 'quiz']),
+            'contextmodule' => CONTEXT_MODULE,
+            'random' => 'random',
+        ]);
+
+        $transaction->allow_commit();
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022020200.04);
+    }
+
+    if ($oldversion < 2022020200.05) {
+        $transaction = $DB->start_delegated_transaction();
+        upgrade_set_timeout(3600);
+
+        // Count all the slot tags to be migrated (for progress bar).
+        $total = $DB->count_records('quiz_slot_tags');
+        $pbar = new progress_bar('migratequestiontags', 1000, true);
+        $i = 0;
+        // Updating slot_tags for random question tags.
+        // Now fetch any quiz slot tags and update those slot details into the question_set_references.
+        $slottags = $DB->get_recordset('quiz_slot_tags', [], 'slotid ASC');
+
+        $tagstrings = [];
+        $lastslot = null;
+        $runinsert = function (int $lastslot, array $tagstrings) use ($DB) {
+            $conditiondata = $DB->get_field('question_set_references', 'filtercondition',
+                ['itemid' => $lastslot, 'component' => 'mod_quiz', 'questionarea' => 'slot']);
+            $condition = json_decode($conditiondata);
+            $condition->tags = $tagstrings;
+            $DB->set_field('question_set_references', 'filtercondition', json_encode($condition),
+                ['itemid' => $lastslot, 'component' => 'mod_quiz', 'questionarea' => 'slot']);
+        };
+
+        foreach ($slottags as $tag) {
+            upgrade_set_timeout(3600);
+            if ($lastslot && $tag->slotid != $lastslot) {
+                if (!empty($tagstrings)) {
+                    // Insert the data.
+                    $runinsert($lastslot, $tagstrings);
+                }
+                // Prepare for the next slot id.
+                $tagstrings = [];
+            }
+
+            $lastslot = $tag->slotid;
+            $tagstrings[] = "{$tag->tagid},{$tag->tagname}";
+            // Update progress.
+            $i++;
+            $pbar->update($i, $total, "Migrating question tags - $i/$total.");
+        }
+        if ($tagstrings) {
+            $runinsert($lastslot, $tagstrings);
+        }
+        $slottags->close();
+
+        $transaction->allow_commit();
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022020200.05);
+    }
+
+    if ($oldversion < 2022020200.06) {
+        $transaction = $DB->start_delegated_transaction();
+        upgrade_set_timeout(3600);
+        // Create question_references record for each question.
+        // Except if qtype is random. That case is handled by question_set_reference.
+        $sql = "INSERT INTO {question_references}
+                        (usingcontextid, component, questionarea, itemid, questionbankentryid)
+                 SELECT c.id, 'mod_quiz', 'slot', qs.id, qv.questionbankentryid
+                   FROM {question} q
+                   JOIN {question_versions} qv ON q.id = qv.questionid
+                   JOIN {quiz_slots} qs ON q.id = qs.questionid
+                   JOIN {modules} m ON m.name = 'quiz'
+                   JOIN {course_modules} cm ON cm.module = m.id AND cm.instance = qs.quizid
+                   JOIN {context} c ON c.instanceid = cm.id AND c.contextlevel = " . CONTEXT_MODULE . "
+                  WHERE q.qtype <> 'random'";
+
+        // Inserting question_references data.
+        $DB->execute($sql);
+
+        $transaction->allow_commit();
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022020200.06);
+    }
+
+    // Finally, drop fields from question table.
+    if ($oldversion < 2022020200.07) {
         // Define fields to be dropped from questions.
         $table = new xmldb_table('question');
 
@@ -3958,8 +4144,337 @@ privatefiles,moodle|/user/files.php';
         }
 
         // Main savepoint reached.
-        upgrade_main_savepoint(true, 2022020200.03);
+        upgrade_main_savepoint(true, 2022020200.07);
     }
+
+    if ($oldversion < 2022021100.01) {
+        $sql = "SELECT preset.*
+                  FROM {adminpresets} preset
+            INNER JOIN {adminpresets_it} it ON preset.id = it.adminpresetid
+                 WHERE it.name = :name AND it.value = :value AND preset.iscore > 0";
+        // Some settings and plugins have been added/removed to the Starter and Full preset. Add them to the core presets if
+        // they haven't been included yet.
+        $params = ['name' => get_string('starterpreset', 'core_adminpresets'), 'iscore' => 1];
+        $starterpreset = $DB->get_record('adminpresets', $params);
+        if (!$starterpreset) {
+            // Starter admin preset might have been created using the English name.
+            $name = get_string_manager()->get_string('starterpreset', 'core_adminpresets', null, 'en');
+            $params['name'] = $name;
+            $starterpreset = $DB->get_record('adminpresets', $params);
+        }
+        if (!$starterpreset) {
+            // We tried, but we didn't find starter by name. Let's find a core preset that sets 'usecomments' setting to 0.
+            $params = ['name' => 'usecomments', 'value' => '0'];
+            $starterpreset = $DB->get_record_sql($sql, $params);
+        }
+
+        $params = ['name' => get_string('fullpreset', 'core_adminpresets')];
+        $fullpreset = $DB->get_record_select('adminpresets', 'name = :name and iscore > 0', $params);
+        if (!$fullpreset) {
+            // Full admin preset might have been created using the English name.
+            $name = get_string_manager()->get_string('fullpreset', 'core_adminpresets', null, 'en');
+            $params['name'] = $name;
+            $fullpreset = $DB->get_record_select('adminpresets', 'name = :name and iscore > 0', $params);
+        }
+        if (!$fullpreset) {
+            // We tried, but we didn't find full by name. Let's find a core preset that sets 'usecomments' setting to 1.
+            $params = ['name' => 'usecomments', 'value' => '1'];
+            $fullpreset = $DB->get_record_sql($sql, $params);
+        }
+
+        $settings = [
+            // Settings. Hide Guest login button for Starter preset (and back to show for Full).
+            [
+                'presetid' => $starterpreset->id,
+                'plugin' => 'none',
+                'name' => 'guestloginbutton',
+                'value' => '0',
+            ],
+            [
+                'presetid' => $fullpreset->id,
+                'plugin' => 'none',
+                'name' => 'guestloginbutton',
+                'value' => '1',
+            ],
+            // Settings. Set Activity chooser tabs to "Starred, All, Recommended"(1) for Starter and back it to default(0) for Full.
+            [
+                'presetid' => $starterpreset->id,
+                'plugin' => 'none',
+                'name' => 'activitychoosertabmode',
+                'value' => '1',
+            ],
+            [
+                'presetid' => $fullpreset->id,
+                'plugin' => 'none',
+                'name' => 'activitychoosertabmode',
+                'value' => '0',
+            ],
+        ];
+        foreach ($settings as $notused => $setting) {
+            $params = ['adminpresetid' => $setting['presetid'], 'plugin' => $setting['plugin'], 'name' => $setting['name']];
+            if (!$DB->record_exists('adminpresets_it', $params)) {
+                $record = new \stdClass();
+                $record->adminpresetid = $setting['presetid'];
+                $record->plugin = $setting['plugin'];
+                $record->name = $setting['name'];
+                $record->value = $setting['value'];
+                $DB->insert_record('adminpresets_it', $record);
+            }
+        }
+
+        $plugins = [
+            // Plugins. Blocks. Disable/enable Online users, Recently accessed courses and Starred courses.
+            [
+                'presetid' => $starterpreset->id,
+                'plugin' => 'block',
+                'name' => 'online_users',
+                'enabled' => '0',
+            ],
+            [
+                'presetid' => $fullpreset->id,
+                'plugin' => 'block',
+                'name' => 'online_users',
+                'enabled' => '1',
+            ],
+            [
+                'presetid' => $starterpreset->id,
+                'plugin' => 'block',
+                'name' => 'recentlyaccessedcourses',
+                'enabled' => '0',
+            ],
+            [
+                'presetid' => $fullpreset->id,
+                'plugin' => 'block',
+                'name' => 'recentlyaccessedcourses',
+                'enabled' => '1',
+            ],
+            [
+                'presetid' => $starterpreset->id,
+                'plugin' => 'block',
+                'name' => 'starredcourses',
+                'enabled' => '0',
+            ],
+            [
+                'presetid' => $fullpreset->id,
+                'plugin' => 'block',
+                'name' => 'starredcourses',
+                'enabled' => '1',
+            ],
+            // Plugins. Enrolments. Disable/enable Guest access.
+            [
+                'presetid' => $starterpreset->id,
+                'plugin' => 'enrol',
+                'name' => 'guest',
+                'enabled' => '0',
+            ],
+            [
+                'presetid' => $fullpreset->id,
+                'plugin' => 'enrol',
+                'name' => 'guest',
+                'enabled' => '1',
+            ],
+        ];
+        foreach ($plugins as $notused => $plugin) {
+            $params = ['adminpresetid' => $plugin['presetid'], 'plugin' => $plugin['plugin'], 'name' => $plugin['name']];
+            if (!$DB->record_exists('adminpresets_plug', $params)) {
+                $record = new \stdClass();
+                $record->adminpresetid = $plugin['presetid'];
+                $record->plugin = $plugin['plugin'];
+                $record->name = $plugin['name'];
+                $record->enabled = $plugin['enabled'];
+                $DB->insert_record('adminpresets_plug', $record);
+            }
+        }
+
+        // Settings: Remove customusermenuitems setting from Starter and Full presets.
+        $sql = "(adminpresetid = ? OR adminpresetid = ?) AND plugin = 'none' AND name = 'customusermenuitems'";
+        $params = [$starterpreset->id, $fullpreset->id];
+        $DB->delete_records_select('adminpresets_it', $sql, $params);
+
+        // Plugins. Question types. Re-enable Description and Essay for Starter.
+        $sql = "(adminpresetid = ? OR adminpresetid = ?) AND plugin = 'qtype' AND (name = 'description' OR name = 'essay')";
+        $DB->delete_records_select('adminpresets_plug', $sql, $params);
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022021100.01);
+
+    }
+
+    if ($oldversion < 2022021100.02) {
+        $table = new xmldb_table('task_scheduled');
+
+        // Changing precision of field minute on table task_scheduled to (200).
+        $field = new xmldb_field('minute', XMLDB_TYPE_CHAR, '200', null, XMLDB_NOTNULL, null, null, 'blocking');
+        $dbman->change_field_precision($table, $field);
+        // Changing precision of field hour on table task_scheduled to (70).
+        $field = new xmldb_field('hour', XMLDB_TYPE_CHAR, '70', null, XMLDB_NOTNULL, null, null, 'minute');
+        $dbman->change_field_precision($table, $field);
+        // Changing precision of field day on table task_scheduled to (90).
+        $field = new xmldb_field('day', XMLDB_TYPE_CHAR, '90', null, XMLDB_NOTNULL, null, null, 'hour');
+        $dbman->change_field_precision($table, $field);
+        // Changing precision of field month on table task_scheduled to (30).
+        $field = new xmldb_field('month', XMLDB_TYPE_CHAR, '30', null, XMLDB_NOTNULL, null, null, 'day');
+        $dbman->change_field_precision($table, $field);
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022021100.02);
+    }
+
+    if ($oldversion < 2022022600.01) {
+        // Get all processor and existing preferences.
+        $processors = $DB->get_records('message_processors');
+        $providers = $DB->get_records('message_providers', null, '', 'id, name, component');
+        $existingpreferences = get_config('message');
+
+        foreach ($processors as $processor) {
+            foreach ($providers as $provider) {
+                // Setting default preference name.
+                $componentproviderbase = $provider->component . '_' . $provider->name;
+                $preferencename = $processor->name.'_provider_'.$componentproviderbase.'_locked';
+                // If we do not have this setting yet, set it to 0.
+                if (!isset($existingpreferences->{$preferencename})) {
+                    set_config($preferencename, 0, 'message');
+                }
+            }
+        }
+
+        upgrade_main_savepoint(true, 2022022600.01);
+    }
+
+    if ($oldversion < 2022030100.00) {
+        $sql = "SELECT preset.*
+                  FROM {adminpresets} preset
+            INNER JOIN {adminpresets_it} it ON preset.id = it.adminpresetid
+                 WHERE it.name = :name AND it.value = :value AND preset.iscore > 0";
+
+        $name = get_string('starterpreset', 'core_adminpresets');
+        $params = ['name' => $name, 'iscore' => 1];
+        $starterpreset = $DB->get_record('adminpresets', $params);
+        if (!$starterpreset) {
+            // Starter admin preset might have been created using the English name. Let's change it to current language.
+            $englishname = get_string_manager()->get_string('starterpreset', 'core_adminpresets', null, 'en');
+            $params['name'] = $englishname;
+            $starterpreset = $DB->get_record('adminpresets', $params);
+        }
+        if (!$starterpreset) {
+            // We tried, but we didn't find starter by name. Let's find a core preset that sets 'usecomments' setting to 0.
+            $params = ['name' => 'usecomments', 'value' => '0'];
+            $starterpreset = $DB->get_record_sql($sql, $params);
+        }
+        // The iscore field is already 1 for starterpreset, so we don't need to change it.
+        // We only need to update the name and comment in case they are different to current language strings.
+        if ($starterpreset && $starterpreset->name != $name) {
+            $starterpreset->name = $name;
+            $starterpreset->comments = get_string('starterpresetdescription', 'core_adminpresets');
+            $DB->update_record('adminpresets', $starterpreset);
+        }
+
+        // Let's mark Full admin presets with current FULL_PRESETS value and change the name to current language.
+        $name = get_string('fullpreset', 'core_adminpresets');
+        $params = ['name' => $name];
+        $fullpreset = $DB->get_record_select('adminpresets', 'name = :name and iscore > 0', $params);
+        if (!$fullpreset) {
+            // Full admin preset might have been created using the English name.
+            $englishname = get_string_manager()->get_string('fullpreset', 'core_adminpresets', null, 'en');
+            $params['name'] = $englishname;
+            $fullpreset = $DB->get_record_select('adminpresets', 'name = :name and iscore > 0', $params);
+        }
+        if (!$fullpreset) {
+            // We tried, but we didn't find full by name. Let's find a core preset that sets 'usecomments' setting to 1.
+            $params = ['name' => 'usecomments', 'value' => '1'];
+            $fullpreset = $DB->get_record_sql($sql, $params);
+        }
+        if ($fullpreset) {
+            // We need to update iscore field value, whether the name is the same or not.
+            $fullpreset->name = $name;
+            $fullpreset->comments = get_string('fullpresetdescription', 'core_adminpresets');
+            $fullpreset->iscore = 2;
+            $DB->update_record('adminpresets', $fullpreset);
+
+            // We are applying again changes made on 2022011100.01 upgrading step because of MDL-73953 bug.
+            $blocknames = ['course_summary', 'feedback', 'rss_client', 'selfcompletion'];
+            list($blocksinsql, $blocksinparams) = $DB->get_in_or_equal($blocknames);
+
+            // Remove entries from the adminpresets_app_plug table (in case the preset has been applied).
+            $appliedpresets = $DB->get_records('adminpresets_app', ['adminpresetid' => $fullpreset->id], '', 'id');
+            if ($appliedpresets) {
+                list($appsinsql, $appsinparams) = $DB->get_in_or_equal(array_keys($appliedpresets));
+                $sql = "adminpresetapplyid $appsinsql AND plugin='block' AND name $blocksinsql";
+                $params = array_merge($appsinparams, $blocksinparams);
+                $DB->delete_records_select('adminpresets_app_plug', $sql, $params);
+            }
+
+            // Remove entries for these blocks from the adminpresets_plug table.
+            $sql = "adminpresetid = ? AND plugin='block' AND name $blocksinsql";
+            $params = array_merge([$fullpreset->id], $blocksinparams);
+            $DB->delete_records_select('adminpresets_plug', $sql, $params);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022030100.00);
+    }
+
+    if ($oldversion < 2022031100.01) {
+        $reportsusermenuitem = 'reports,core_reportbuilder|/reportbuilder/index.php';
+        upgrade_add_item_to_usermenu($reportsusermenuitem);
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022031100.01);
+    }
+
+    if ($oldversion < 2022032200.01) {
+
+        // Define index to be added to question_references.
+        $table = new xmldb_table('question_references');
+        $index = new xmldb_index('context-component-area-itemid', XMLDB_INDEX_UNIQUE,
+            ['usingcontextid', 'component', 'questionarea', 'itemid']);
+
+        // Conditionally launch add field id.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022032200.01);
+    }
+
+    if ($oldversion < 2022032200.02) {
+
+        // Define index to be added to question_references.
+        $table = new xmldb_table('question_set_references');
+        $index = new xmldb_index('context-component-area-itemid', XMLDB_INDEX_UNIQUE,
+            ['usingcontextid', 'component', 'questionarea', 'itemid']);
+
+        // Conditionally launch add field id.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022032200.02);
+    }
+
+    if ($oldversion < 2022041200.01) {
+
+        // The original default admin presets "sensible settings" (those that should be treated as sensitive).
+        $originalsensiblesettings = 'recaptchapublickey@@none, recaptchaprivatekey@@none, googlemapkey3@@none, ' .
+            'secretphrase@@url, cronremotepassword@@none, smtpuser@@none, smtppass@none, proxypassword@@none, ' .
+            'quizpassword@@quiz, allowedip@@none, blockedip@@none, dbpass@@logstore_database, messageinbound_hostpass@@none, ' .
+            'bind_pw@@auth_cas, pass@@auth_db, bind_pw@@auth_ldap, dbpass@@enrol_database, bind_pw@@enrol_ldap, ' .
+            'server_password@@search_solr, ssl_keypassword@@search_solr, alternateserver_password@@search_solr, ' .
+            'alternatessl_keypassword@@search_solr, test_password@@cachestore_redis, password@@mlbackend_python';
+
+        // Check if the current config matches the original default, upgrade to new default if so.
+        if (get_config('adminpresets', 'sensiblesettings') === $originalsensiblesettings) {
+            $newsensiblesettings = "{$originalsensiblesettings}, badges_badgesalt@@none, calendar_exportsalt@@none";
+            set_config('sensiblesettings', $newsensiblesettings, 'adminpresets');
+        }
+
+        // Main savepoint reached.
+        upgrade_main_savepoint(true, 2022041200.01);
+    }
+
+    // Automatically generated Moodle v4.0.0 release upgrade line.
+    // Put any upgrade step following this.
 
     return true;
 }

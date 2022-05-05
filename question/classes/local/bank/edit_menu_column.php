@@ -64,7 +64,7 @@ class edit_menu_column extends column_base {
         return $remainingcolumns;
     }
 
-    protected function get_title() {
+    public function get_title() {
         return get_string('actions');
     }
 
@@ -105,4 +105,9 @@ class edit_menu_column extends column_base {
     public function get_actions(): array {
         return $this->actions;
     }
+
+    public function get_extra_classes(): array {
+        return ['pr-3'];
+    }
+
 }

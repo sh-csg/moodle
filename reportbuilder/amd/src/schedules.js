@@ -119,7 +119,9 @@ export const init = reportId => {
         if (scheduleEdit) {
             event.preventDefault();
 
-            const scheduleModal = createScheduleModal(scheduleEdit, getString('editscheduledetails', 'core_reportbuilder'),
+            // Use triggerElement to return focus to the action menu toggle.
+            const triggerElement = scheduleEdit.closest('.dropdown').querySelector('.dropdown-toggle');
+            const scheduleModal = createScheduleModal(triggerElement, getString('editscheduledetails', 'core_reportbuilder'),
                 reportId, scheduleEdit.dataset.scheduleId);
             scheduleModal.addEventListener(scheduleModal.events.FORM_SUBMITTED, () => {
                 getString('scheduleupdated', 'core_reportbuilder')
@@ -140,10 +142,13 @@ export const init = reportId => {
         if (scheduleSend) {
             event.preventDefault();
 
+            // Use triggerElement to return focus to the action menu toggle.
+            const triggerElement = scheduleSend.closest('.dropdown').querySelector('.dropdown-toggle');
             Notification.saveCancelPromise(
                 getString('sendschedule', 'core_reportbuilder'),
                 getString('sendscheduleconfirm', 'core_reportbuilder', scheduleSend.dataset.scheduleName),
-                getString('confirm', 'core')
+                getString('confirm', 'core'),
+                {triggerElement}
             ).then(() => {
                 const pendingPromise = new Pending('core_reportbuilder/schedules:send');
 
@@ -161,10 +166,13 @@ export const init = reportId => {
         if (scheduleDelete) {
             event.preventDefault();
 
+            // Use triggerElement to return focus to the action menu toggle.
+            const triggerElement = scheduleDelete.closest('.dropdown').querySelector('.dropdown-toggle');
             Notification.saveCancelPromise(
                 getString('deleteschedule', 'core_reportbuilder'),
                 getString('deletescheduleconfirm', 'core_reportbuilder', scheduleDelete.dataset.scheduleName),
-                getString('delete', 'core')
+                getString('delete', 'core'),
+                {triggerElement}
             ).then(() => {
                 const pendingPromise = new Pending('core_reportbuilder/schedules:delete');
 

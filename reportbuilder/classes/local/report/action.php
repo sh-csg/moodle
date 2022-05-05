@@ -18,6 +18,7 @@ declare(strict_types=1);
 
 namespace core_reportbuilder\local\report;
 
+use action_menu_link;
 use lang_string;
 use moodle_url;
 use pix_icon;
@@ -61,7 +62,7 @@ final class action {
      *
      * @param moodle_url $url
      * @param pix_icon $icon
-     * @param array $attributes
+     * @param string[] $attributes Array of attributes to include in action, each will be cast to string prior to use
      * @param bool $popup
      * @param ?lang_string $title
      */
@@ -94,15 +95,13 @@ final class action {
     }
 
     /**
-     * Return renderer action icon suitable for output
-     *
-     * @uses core_renderer::action_icon()
+     * Return action menu link suitable for output, or null if the action cannot be displayed (because one of its callbacks
+     * returned false, {@see add_callback})
      *
      * @param stdClass $row
-     * @return string|null
+     * @return action_menu_link|null
      */
-    public function get_action_link(stdClass $row): ?string {
-        global $OUTPUT;
+    public function get_action_link(stdClass $row): ?action_menu_link {
 
         foreach ($this->callbacks as $callback) {
             $row = clone $row; // Clone so we don't modify the shared row inside a callback.
@@ -117,21 +116,31 @@ final class action {
             self::replace_placeholders($this->url->params(), $row)
         );
 
-        $this->attributes['role'] = 'button';
-        $this->attributes['title'] = $this->attributes['aria-label'] = (string) $this->title;
+        // Ensure we have a title attribute set, if one wasn't already provided.
+        if (!array_key_exists('title', $this->attributes)) {
+            $this->attributes['title'] = (string) $this->title;
+        }
+        $this->attributes['aria-label'] = $this->attributes['title'];
 
         if ($this->popup) {
             $this->attributes['data-action'] = 'report-action-popup';
             $this->attributes['data-popup-action'] = json_encode(new popup_action('click', $url));
         }
 
-        return $OUTPUT->action_icon($url, $this->icon, null, self::replace_placeholders($this->attributes, $row));
+        // Interpolate any placeholders with correct values.
+        $attributes = self::replace_placeholders($this->attributes, $row);
+
+        // Ensure title attribute isn't duplicated.
+        $title = $attributes['title'];
+        unset($attributes['title']);
+
+        return new action_menu_link($url, $this->icon, $title, null, $attributes);
     }
 
     /**
      * Given an array of values, replace all placeholders with corresponding property of the given row
      *
-     * @param array $values
+     * @param string[] $values
      * @param stdClass $row
      * @return array
      */
@@ -139,7 +148,7 @@ final class action {
         return array_map(static function($value) use ($row) {
             return preg_replace_callback('/^:(?<property>.*)$/', static function(array $matches) use ($row): string {
                 return (string) ($row->{$matches['property']} ?? '');
-            }, $value);
+            }, (string) $value);
         }, $values);
     }
 }
