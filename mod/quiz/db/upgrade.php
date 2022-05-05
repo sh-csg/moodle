@@ -66,5 +66,20 @@ function xmldb_quiz_upgrade($oldversion) {
     // Automatically generated Moodle v3.11.0 release upgrade line.
     // Put any upgrade step following this.
 
+    if ($oldversion < 2022040402) {
+
+        // Define field anonymous to be added to quiz.
+        $table = new xmldb_table('quiz');
+        $field = new xmldb_field('anonymous', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0',);
+
+        // Conditionally launch add field anonymous.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Quiz savepoint reached.
+        upgrade_mod_savepoint(true, 2022040402, 'quiz');
+    }
+
     return true;
 }

@@ -64,6 +64,9 @@ abstract class quiz_attempts_report extends quiz_default_report {
     /** @var boolean caches the results of {@link should_show_grades()}. */
     protected $showgrades = null;
 
+    /** @var boolean whether to hide user information in the report */
+    protected $anonymous;
+
     /**
      *  Initialise various aspects of this report.
      *
@@ -80,7 +83,11 @@ abstract class quiz_attempts_report extends quiz_default_report {
      *              Will be the same as either element 1 or 2.
      */
     protected function init($mode, $formclass, $quiz, $cm, $course) {
+        global $DB;
         $this->mode = $mode;
+
+        $record = $DB->get_record('quiz', ['id' => $cm->instance], 'anonymous');
+        $this->anonymous = $record->anonymous || false;
 
         $this->context = context_module::instance($cm->id);
 
@@ -189,6 +196,12 @@ abstract class quiz_attempts_report extends quiz_default_report {
      */
     protected function add_user_columns($table, &$columns, &$headers) {
         global $CFG;
+
+        // Don't add user columns if the quiz is anonymous.
+        if ($this->anonymous) {
+            return;
+        }
+
         if (!$table->is_downloading() && $CFG->grade_report_showuserimage) {
             $columns[] = 'picture';
             $headers[] = '';
@@ -246,6 +259,11 @@ abstract class quiz_attempts_report extends quiz_default_report {
      * @param array $headers the columns headings. Added to.
      */
     protected function add_time_columns(&$columns, &$headers) {
+        // Don't add time columns if quiz is anonymous.
+        if ($this->anonymous) {
+            return;
+        }
+
         $columns[] = 'timestart';
         $headers[] = get_string('startedon', 'quiz');
 

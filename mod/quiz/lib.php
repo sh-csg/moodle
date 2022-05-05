@@ -752,7 +752,7 @@ function quiz_grade_item_update($quiz, $grades = null) {
         $params = array('itemname' => $quiz->name);
     }
 
-    if ($quiz->grade > 0) {
+    if ($quiz->grade > 0 && !$quiz->anonymous) {
         $params['gradetype'] = GRADE_TYPE_VALUE;
         $params['grademax']  = $quiz->grade;
         $params['grademin']  = 0;
