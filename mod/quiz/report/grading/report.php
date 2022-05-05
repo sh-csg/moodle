@@ -119,7 +119,7 @@ class quiz_grading_report extends quiz_default_report {
         // Check permissions.
         $this->context = context_module::instance($this->cm->id);
         require_capability('mod/quiz:grade', $this->context);
-        $shownames = has_capability('quiz/grading:viewstudentnames', $this->context);
+        $shownames = has_capability('quiz/grading:viewstudentnames', $this->context) && !$quiz->anonymous;
         // Whether the current user can see custom user fields.
         $showcustomfields = has_capability('quiz/grading:viewidnumber', $this->context);
         $userfieldsapi = \core_user\fields::for_identity($this->context)->with_name();

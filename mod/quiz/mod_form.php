@@ -78,6 +78,22 @@ class mod_quiz_mod_form extends moodleform_mod {
 
         // Introduction.
         $this->standard_intro_elements(get_string('introduction', 'quiz'));
+        $mform->addElement('advcheckbox', 'anonymous', get_string('anonymous', 'quiz'));
+        $mform->addHelpButton('anonymous', 'anonymous', 'quiz');
+
+        if (
+            is_numeric($this->_instance) &&
+            $DB->count_records('quiz_attempts', ['quiz' => $this->_instance]) > 0 &&
+            $this->current->anonymous == 1
+        ) {
+            $mform->addElement('static', 'anonymous_description', get_string('anonymous', 'quiz'),
+                get_string('anonymous_description', 'quiz'));
+                $mform->addElement('hidden', 'anonymous', 1);
+        } else {
+            $mform->addElement('advcheckbox', 'anonymous', get_string('anonymous', 'quiz'));
+            $mform->addHelpButton('anonymous', 'anonymous', 'quiz');
+        }
+        $mform->setType('anonymous', PARAM_INT);
 
         // -------------------------------------------------------------------------------
         $mform->addElement('header', 'timing', get_string('timing', 'quiz'));
