@@ -1618,6 +1618,16 @@ class core_course_category implements renderable, cacheable_object, IteratorAggr
             $search['search'] = '';
         }
 
+        $courseidsearch = '';
+        $courseidparams = [];
+
+        if (isset($options['courseids'])) {
+            $courseidsearch = 'c.id IN (:courseid' . join(', :courseid', range(0, count($options['courseids']) - 1)) . ')';
+            for ($i = 0; $i < count($options['courseids']); $i++) {
+                $courseidparams['courseid' . $i] = $options['courseids'][$i];
+            }
+        }
+
         if (empty($search['blocklist']) && empty($search['modulelist']) && empty($search['tagid'])) {
             // Search courses that have specified words in their names/summaries.
             $searchterms = preg_split('|\s+|', trim($search['search']), 0, PREG_SPLIT_NO_EMPTY);
@@ -1625,6 +1635,10 @@ class core_course_category implements renderable, cacheable_object, IteratorAggr
             if (!empty($search['onlywithcompletion'])) {
                 $searchcond = ['c.enablecompletion = :p1'];
                 $searchcondparams = ['p1' => 1];
+            }
+            if (!empty($courseidsearch)) {
+                $searchcond[] = $courseidsearch;
+                $searchcondparams = array_merge($searchcondparams, $courseidparams);
             }
             $courselist = get_courses_search($searchterms, 'c.sortorder ASC', 0, 9999999, $totalcount,
                 $requiredcapabilities, $searchcond, $searchcondparams);
@@ -1672,6 +1686,11 @@ class core_course_category implements renderable, cacheable_object, IteratorAggr
                 debugging('No criteria is specified while searching courses', DEBUG_DEVELOPER);
                 return array();
             }
+            if (isset($options['courseids'])) {
+                $where .= ' AND ' . $courseidsearch;
+                $params = array_merge($params, $courseidparams);
+            }
+
             $courselist = self::get_course_records($where, $params, $options, true);
             if (!empty($requiredcapabilities)) {
                 foreach ($courselist as $key => $course) {
