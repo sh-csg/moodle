@@ -3515,7 +3515,7 @@ class core_course_external extends external_api {
      * @return string
      */
     public static function edit_module($action, $id, $sectionreturn = null) {
-        global $PAGE, $DB;
+        global $PAGE, $DB, $OUTPUT;
         // Validate and normalize parameters.
         $params = self::validate_parameters(self::edit_module_parameters(),
             array('action' => $action, 'id' => $id, 'sectionreturn' => $sectionreturn));
@@ -3567,9 +3567,15 @@ class core_course_external extends external_api {
                     $section = $modinfo->get_section_info($newcm->sectionnum);
                     $cm = $modinfo->get_cm($id);
 
+                    $PAGE->set_context($coursecontext);
+                    $PAGE->set_url('/');
+                    $OUTPUT->header();
+                    $PAGE->start_collecting_javascript_requirements();
+
                     // Get both original and new element html.
                     $result = $renderer->course_section_updated_cm_item($format, $section, $cm);
                     $result .= $renderer->course_section_updated_cm_item($format, $section, $newcm);
+                    $result .= $PAGE->requires->get_end_code();
                     return $result;
                 }
                 break;
@@ -3644,7 +3650,7 @@ class core_course_external extends external_api {
      * @return string
      */
     public static function get_module($id, $sectionreturn = null) {
-        global $PAGE;
+        global $PAGE, $OUTPUT;
         // Validate and normalize parameters.
         $params = self::validate_parameters(self::get_module_parameters(),
             array('id' => $id, 'sectionreturn' => $sectionreturn));
@@ -3664,7 +3670,9 @@ class core_course_external extends external_api {
 
         // Validate access to the course (note, this is html for the course view page, we don't validate access to the module).
         list($course, $cm) = get_course_and_cm_from_cmid($id);
-        self::validate_context(context_course::instance($course->id));
+        $context = context_course::instance($course->id);
+        self::validate_context($context);
+        $PAGE->set_context($context);
 
         $format = course_get_format($course);
         if ($sectionreturn) {
@@ -3674,7 +3682,13 @@ class core_course_external extends external_api {
 
         $modinfo = $format->get_modinfo();
         $section = $modinfo->get_section_info($cm->sectionnum);
-        return $renderer->course_section_updated_cm_item($format, $section, $cm);
+        $PAGE->set_url('/');
+        $OUTPUT->header();
+        $PAGE->start_collecting_javascript_requirements();
+
+        $html = $renderer->course_section_updated_cm_item($format, $section, $cm);
+        $js = $PAGE->requires->get_end_code();
+        return $html . $js;
     }
 
     /**
