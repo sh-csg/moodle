@@ -1440,14 +1440,12 @@ $activity-add-hover: theme-color-level('primary', -10) !default;
     }
 
     /* Prevent bootstrap strech-link from covering the inplace editable button using z-index. */
-    .activityname {
-        .afterlink {
-            margin-left: 0.5rem;
-        }
-        .inplaceeditable .quickeditlink {
-            z-index: 2;
-            margin-left: 0.5rem;
-        }
+    .afterlink {
+        margin-left: 0.5rem;
+    }
+    .inplaceeditable .quickeditlink {
+        z-index: 2;
+        margin-left: 0.5rem;
     }
 
     .action-menu-item {

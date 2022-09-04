@@ -14871,9 +14871,9 @@ span.editinstructions {
     display: flex;
     flex: 0 1 auto;
     max-width: 100%; }
-  .activity-item .activityname .afterlink {
+  .activity-item .afterlink {
     margin-left: 0.5rem; }
-  .activity-item .activityname .inplaceeditable .quickeditlink {
+  .activity-item .inplaceeditable .quickeditlink {
     z-index: 2;
     margin-left: 0.5rem; }
   .activity-item .action-menu-item {
