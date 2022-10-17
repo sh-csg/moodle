@@ -14967,6 +14967,31 @@ span.editinstructions {
   .automatic-completion-conditions .badge:first-child {
     margin-top: 0; }
 
+.activity div.divider {
+  height: 2rem;
+  margin-top: -1.25rem;
+  margin-bottom: -0.75rem;
+  z-index: 5; }
+  .activity div.divider button {
+    border-radius: 100%;
+    width: 2rem;
+    height: 2rem;
+    position: relative;
+    left: calc(50% - 1rem);
+    top: calc(50% - 1rem);
+    visibility: hidden;
+    margin: 0;
+    padding: 0; }
+    .activity div.divider button i.icon {
+      height: 1.5rem;
+      width: 1.5rem;
+      font-size: 1.5rem;
+      position: absolute;
+      left: 0.25rem;
+      top: 0.25rem; }
+  .activity div.divider:hover button {
+    visibility: visible; }
+
 /* Anchor link offset fix. This makes hash links scroll 60px down to account for the fixed header. */
 :target {
   scroll-margin-top: 70px; }

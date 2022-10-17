@@ -1530,3 +1530,32 @@ $activity-add-hover: theme-color-level('primary', -10) !default;
         margin-top: 0;
     }
 }
+
+.activity div.divider {
+    height: 2rem;
+    margin-top: -1.25rem;
+    margin-bottom: -0.75rem;
+    z-index: 5;
+    button {
+        border-radius: 100%;
+        width: 2rem;
+        height: 2rem;
+        position: relative;
+        left: calc(50% - 1rem);
+        top: calc(50% - 1rem);
+        visibility: hidden;
+        margin: 0;
+        padding: 0;
+        i.icon {
+            height: 1.5rem;
+            width: 1.5rem;
+            font-size: 1.5rem;
+            position: absolute;
+            left: 0.25rem;
+            top: 0.25rem;
+        }
+    }
+    &:hover button {
+        visibility: visible;
+    }
+}
