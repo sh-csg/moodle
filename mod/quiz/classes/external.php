@@ -125,7 +125,7 @@ class mod_quiz_external extends external_api {
                                                     'reviewoverallfeedback', 'questionsperpage', 'navmethod',
                                                     'browsersecurity', 'delay1', 'delay2', 'showuserpicture', 'showblocks',
                                                     'completionattemptsexhausted', 'overduehandling',
-                                                    'graceperiod', 'canredoquestions', 'allowofflineattempts');
+                                                    'graceperiod', 'canredoquestions', 'allowofflineattempts', 'anonymous');
                         $viewablefields = array_merge($viewablefields, $additionalfields);
 
                         // Any course module fields that previously existed in quiz.
@@ -255,6 +255,8 @@ class mod_quiz_external extends external_api {
                             'hasfeedback' => new external_value(PARAM_INT, 'Whether the quiz has any non-blank feedback text',
                                                                 VALUE_OPTIONAL),
                             'hasquestions' => new external_value(PARAM_INT, 'Whether the quiz has questions', VALUE_OPTIONAL),
+                            'anonymous' => new external_value(PARAM_INT, 'Whether the quiz hides student names from teachers',
+                                                                VALUE_OPTIONAL),
                         ]
                     ))
                 ),

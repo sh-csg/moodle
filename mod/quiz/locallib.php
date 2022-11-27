@@ -1557,7 +1557,11 @@ function quiz_get_review_options($quiz, $attempt, $context) {
         $options->generalfeedback = question_display_options::VISIBLE;
         $options->rightanswer = question_display_options::VISIBLE;
         $options->overallfeedback = question_display_options::VISIBLE;
-        $options->history = question_display_options::VISIBLE;
+        if (!empty($quiz->anonymous)) {
+            $options->history = question_display_options::HIDDEN;
+        } else {
+            $options->history = question_display_options::VISIBLE;
+        }
         $options->userinfoinhistory = $attempt->userid;
 
     }
