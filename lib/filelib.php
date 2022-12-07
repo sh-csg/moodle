@@ -1179,6 +1179,10 @@ function file_save_draft_area_files($draftitemid, $contextid, $component, $filea
                     continue;
                 }
                 $filecount++;
+            } else {
+                if ($file->get_filepath() == '/' && $file->get_filename() == '.') {
+                    $timestamp = $file->get_timecreated();
+                }
             }
             $newhash = $fs->get_pathname_hash($contextid, $component, $filearea, $itemid, $file->get_filepath(), $file->get_filename());
             $newhashes[$newhash] = $file;
@@ -1189,8 +1193,16 @@ function file_save_draft_area_files($draftitemid, $contextid, $component, $filea
         foreach ($oldfiles as $oldfile) {
             $oldhash = $oldfile->get_pathnamehash();
             if (!isset($newhashes[$oldhash])) {
-                // delete files not needed any more - deleted by user
-                $oldfile->delete();
+                // Delete files not needed any more - deleted by user.
+                // Old files are only deleted if they were already present at the creation time of the draft area.
+                // Other files are only kept if maxfiles option is not set to prevent another race condition.
+                if (
+                    $options['maxfiles'] != -1 ||
+                    empty($timestamp) ||
+                    $oldfile->get_timemodified() <= $timestamp
+                ) {
+                    $oldfile->delete();
+                }
                 continue;
             }
 
