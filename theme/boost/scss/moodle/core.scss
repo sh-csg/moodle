@@ -2977,3 +2977,12 @@ body.dragging {
         }
     }
 }
+
+.dropdown-menu {
+    max-width: 100vw;
+    li .dropdown-item {
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+}
