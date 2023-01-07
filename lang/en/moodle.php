@@ -1925,6 +1925,7 @@ $string['save'] = 'Save';
 $string['saveandnext'] = 'Save and show next';
 $string['savedat'] = 'Saved at:';
 $string['savechanges'] = 'Save changes';
+$string['savechangesandcontinueediting'] = 'Save changes and continue editing';
 $string['savechangesanddisplay'] = 'Save and display';
 $string['savechangesandreturn'] = 'Save and return';
 $string['savechangesandreturntocourse'] = 'Save and return to course';

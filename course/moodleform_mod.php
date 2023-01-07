@@ -1021,16 +1021,21 @@ abstract class moodleform_mod extends moodleform {
      *
      * @param bool $cancel show cancel button
      * @param string $submitlabel null means default, false means none, string is label text
-     * @param string $submit2label  null means default, false means none, string is label text
+     * @param string $submit2label null means default, false means none, string is label text
+     * @param string $submit3label null means default, false means none, string is label text
      * @return void
      */
-    function add_action_buttons($cancel=true, $submitlabel=null, $submit2label=null) {
+    public function add_action_buttons($cancel = true, $submitlabel = null, $submit2label = null, $submit3label = null) {
         if (is_null($submitlabel)) {
             $submitlabel = get_string('savechangesanddisplay');
         }
 
         if (is_null($submit2label)) {
             $submit2label = get_string('savechangesandreturntocourse');
+        }
+
+        if (is_null($submit3label)) {
+            $submit3label = get_string('savechangesandcontinueediting');
         }
 
         $mform = $this->_form;
@@ -1050,6 +1055,10 @@ abstract class moodleform_mod extends moodleform {
 
         if ($submitlabel !== false) {
             $buttonarray[] = &$mform->createElement('submit', 'submitbutton', $submitlabel);
+        }
+
+        if ($submit3label !== false) {
+            $buttonarray[] = &$mform->createElement('submit', 'submitbutton3', $submit3label);
         }
 
         if ($cancel) {

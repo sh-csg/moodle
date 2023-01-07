@@ -192,6 +192,9 @@ if ($mform->is_cancelled()) {
         if (!empty($fromform->showgradingmanagement)) {
             $url = $fromform->gradingman->get_management_url($url);
         }
+    } else if (isset($fromform->submitbutton3)) {
+        $url = new moodle_url("/course/modedit.php", array('update' => $fromform->coursemodule, 'sr' => $sectionreturn));
+        redirect($url);
     } else {
         $options = [];
         if (!is_null($sectionreturn)) {
