@@ -2587,14 +2587,15 @@ class core_course_external extends external_api {
             $options = array('offset' => $offset, 'limit' => $params['perpage']);
         }
 
-        // Search the courses.
-        $courses = core_course_category::search_courses($searchcriteria, $options, $params['requiredcapabilities']);
-        $totalcount = core_course_category::search_courses_count($searchcriteria, $options, $params['requiredcapabilities']);
-
         if (!empty($limittoenrolled)) {
             // Get the courses where the current user has access.
             $enrolled = enrol_get_my_courses(array('id', 'cacherev'));
+            $options['courseids'] = array_keys($enrolled);
         }
+
+        // Search the courses.
+        $courses = core_course_category::search_courses($searchcriteria, $options, $params['requiredcapabilities']);
+        $totalcount = core_course_category::search_courses_count($searchcriteria, $options, $params['requiredcapabilities']);
 
         $finalcourses = array();
         $categoriescache = array();
