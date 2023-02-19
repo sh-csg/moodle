@@ -218,8 +218,58 @@ class data_field_file extends data_field_base {
         $DB->update_record('data_content', $content);
     }
 
-    function text_export_supported() {
-        return false;
+    /**
+     * Binary data can be exported
+     *
+     * @return void
+     */
+    public function binary_export_supported() {
+        return true;
+    }
+
+    /**
+     * Returns the content of the image
+     *
+     * @param int $recordid
+     * @return string
+     */
+    public function export_binary_value($recordid) {
+        $file = $this->get_file($recordid);
+        if ($file === null) {
+            return '';
+        }
+        return $file->get_content();
+    }
+
+    /**
+     * Import a file from a string
+     *
+     * @param int $contentid The contentid the file field belongs to
+     * @param string $binaryvalue The binary value (already decoded) of the file
+     * @param string $filename The filename
+     * @return void
+     */
+    public function import_binary_value($contentid, $binaryvalue, $filename) {
+        $filerecord = [
+            'contextid' => $this->context->id,
+            'component' => 'mod_data',
+            'filearea' => 'content',
+            'itemid' => $contentid,
+            'filepath' => '/',
+            'filename' => $filename,
+        ];
+        $fs = get_file_storage();
+        $fs->create_file_from_string($filerecord, $binaryvalue);
+    }
+
+    /**
+     * Returns the file name
+     *
+     * @param stdClass $record
+     * @return string
+     */
+    public function export_text_value($record) {
+        return $record->content;
     }
 
     function file_ok($path) {

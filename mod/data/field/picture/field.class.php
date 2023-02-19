@@ -348,8 +348,59 @@ class data_field_picture extends data_field_base {
         }
     }
 
-    function text_export_supported() {
-        return false;
+    /**
+     * Binary data can be exported
+     *
+     * @return bool
+     */
+    public function binary_export_supported() {
+        return true;
+    }
+
+    /**
+     * Returns the content of the image
+     *
+     * @param int $recordid
+     * @return string
+     */
+    public function export_binary_value($recordid) {
+        $file = $this->get_file($recordid);
+        if ($file === null) {
+            return '';
+        }
+        return $file->get_content();
+    }
+
+    /**
+     * Import an image from a string
+     *
+     * @param int $contentid The contentid the picture field belongs to
+     * @param string $binaryvalue The binary value (already decoded) of the image
+     * @param string $filename The filename
+     * @return void
+     */
+    public function import_binary_value($contentid, $binaryvalue, $filename) {
+        $filerecord = [
+            'contextid' => $this->context->id,
+            'component' => 'mod_data',
+            'filearea' => 'content',
+            'itemid' => $contentid,
+            'filepath' => '/',
+            'filename' => $filename,
+        ];
+        $fs = get_file_storage();
+        $file = $fs->create_file_from_string($filerecord, $binaryvalue);
+        $this->update_thumbnail(null, $file);
+    }
+
+    /**
+     * Returns the file name of the image
+     *
+     * @param stdClass $record
+     * @return string
+     */
+    public function export_text_value($record) {
+        return $record->content;
     }
 
     function file_ok($path) {
