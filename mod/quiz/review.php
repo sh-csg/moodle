@@ -136,7 +136,7 @@ if ($attempt->state == quiz_attempt::FINISHED) {
 
 // Prepare summary informat about the whole attempt.
 $summarydata = [];
-if (!$attemptobj->get_quiz()->showuserpicture && $attemptobj->get_userid() != $USER->id) {
+if (!$attemptobj->get_quiz()->showuserpicture && $attemptobj->get_userid() != $USER->id && empty($quiz->anonymous)) {
     // If showuserpicture is true, the picture is shown elsewhere, so don't repeat it.
     $student = $DB->get_record('user', ['id' => $attemptobj->get_userid()]);
     $userpicture = new user_picture($student);
@@ -161,17 +161,19 @@ if ($attemptobj->has_capability('mod/quiz:viewreports')) {
 }
 
 // Timing information.
-$summarydata['startedon'] = [
-    'title'   => get_string('startedon', 'quiz'),
-    'content' => userdate($attempt->timestart),
-];
+if (empty($quiz->anonymous) || $attemptobj->get_userid() == $USER->id) {
+    $summarydata['startedon'] = [
+        'title'   => get_string('startedon', 'quiz'),
+        'content' => userdate($attempt->timestart),
+    ];
+}
 
 $summarydata['state'] = [
     'title'   => get_string('attemptstate', 'quiz'),
     'content' => quiz_attempt::state_name($attempt->state),
 ];
 
-if ($attempt->state == quiz_attempt::FINISHED) {
+if ($attempt->state == quiz_attempt::FINISHED && (empty($quiz->anonymous) || $attemptobj->get_userid() == $USER->id)) {
     $summarydata['completedon'] = [
         'title'   => get_string('completedon', 'quiz'),
         'content' => userdate($attempt->timefinish),

@@ -250,7 +250,7 @@ class external_test extends externallib_advanced_testcase {
                                         'reviewoverallfeedback', 'questionsperpage', 'navmethod',
                                         'browsersecurity', 'delay1', 'delay2', 'showuserpicture', 'showblocks',
                                         'completionattemptsexhausted', 'completionpass', 'autosaveperiod', 'hasquestions',
-                                        'overduehandling', 'graceperiod', 'canredoquestions', 'allowofflineattempts'];
+                                        'overduehandling', 'graceperiod', 'canredoquestions', 'allowofflineattempts', 'anonymous'];
         $managerfields = ['shuffleanswers', 'timecreated', 'timemodified', 'password', 'subnet'];
 
         // Add expected coursemodule and other data.

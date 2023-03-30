@@ -176,5 +176,20 @@ function xmldb_quiz_upgrade($oldversion) {
         upgrade_mod_savepoint(true, 2022120500, 'quiz');
     }
 
+    if ($oldversion < 2023033000) {
+
+        // Define field anonymous to be added to quiz.
+        $table = new xmldb_table('quiz');
+        $field = new xmldb_field('anonymous', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+
+        // Conditionally launch add field anonymous.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Quiz savepoint reached.
+        upgrade_mod_savepoint(true, 2023033000, 'quiz');
+    }
+
     return true;
 }
