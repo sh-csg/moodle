@@ -69,6 +69,10 @@ class dynamic_form extends external_api {
 
         /** @var \core_form\dynamic_form $form */
         $form = new $formclass(null, null, 'post', '', [], true, $formdata, true);
+        // Hack alert: Forcing bootstrap_renderer to initiate moodle page.
+        $OUTPUT->header();
+
+        $PAGE->start_collecting_javascript_requirements();
         $form->set_data_for_dynamic_submission();
         if (!$form->is_cancelled() && $form->is_submitted() && $form->is_validated()) {
             // Form was properly submitted, process and return results of processing. No need to render it again.
@@ -77,10 +81,6 @@ class dynamic_form extends external_api {
 
         // Render actual form.
 
-        // Hack alert: Forcing bootstrap_renderer to initiate moodle page.
-        $OUTPUT->header();
-
-        $PAGE->start_collecting_javascript_requirements();
         $data = $form->render();
         $jsfooter = $PAGE->requires->get_end_code();
         $output = ['submitted' => false, 'html' => $data, 'javascript' => $jsfooter];
