@@ -77,13 +77,17 @@ class renderer extends plugin_renderer_base {
      *
      * @param \moodle_url $url The base url.
      * @param \stdClass $course Current course.
+     * @param int $activegroup Currently active group, defaults to 0.
      * @return string HTML
      */
-    public function render_groups_select(\moodle_url $url, \stdClass $course): string {
+    public function render_groups_select(\moodle_url $url, \stdClass $course, int $activegroup = 0): string {
+        $groups = groups_get_all_groups($course->id);
+        if (count($groups) == 0) {
+            return '';
+        }
         $groupurl = fullclone($url);
         $groupurl->remove_params(['page', 'group']);
-        $groupoutput = groups_print_course_menu($course, $groupurl, true);
-
+        $groupoutput = groups_allgroups_course_menu($course, $groupurl, true, $activegroup);
         if (empty($groupoutput)) {
             return $groupoutput;
         }
