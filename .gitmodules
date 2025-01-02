@@ -1,0 +1,3 @@
+[submodule "mod/learningmap"]
+	path = mod/learningmap
+	url = https://github.com/mebis-lp/mod_learningmap
