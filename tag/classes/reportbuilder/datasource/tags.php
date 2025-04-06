@@ -56,7 +56,7 @@ class tags extends datasource {
         $tagentity = new tag();
         $tagalias = $tagentity->get_table_alias('tag');
         $this->add_entity($tagentity
-            ->add_join("LEFT JOIN {tag} {$tagalias} ON {$tagalias}.tagcollid = {$collectionalias}.id")
+            ->add_join("JOIN {tag} {$tagalias} ON {$tagalias}.tagcollid = {$collectionalias}.id")
         );
 
         // Join instance entity to tag.
