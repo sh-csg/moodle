@@ -290,6 +290,7 @@ class data_field_picture extends data_field_base {
                 $fs = get_file_storage();
                 file_save_draft_area_files($value, $this->context->id, 'mod_data', 'content', $content->id);
                 $usercontext = context_user::instance($USER->id);
+                $fs->delete_area_files($usercontext->id, 'user', 'draft', $value);
                 $files = $fs->get_area_files(
                     $this->context->id,
                     'mod_data', 'content',
