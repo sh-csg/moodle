@@ -360,6 +360,9 @@ class format_singleactivity extends core_courseformat\base {
             if (plugin_supports('mod', $module, FEATURE_NO_VIEW_LINK, false)) {
                 unset($availabletypes[$module]);
             }
+            if (!plugin_supports('mod', $module, FEATURE_CAN_DISPLAY, true)) {
+                unset($availabletypes[$module]);
+            }
             if (sectiondelegate::has_delegate_class('mod_' . $module)) {
                 unset($availabletypes[$module]);
             }
