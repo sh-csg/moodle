@@ -230,7 +230,7 @@ class data_field_textarea extends data_field_base {
 
 
     function update_content($recordid, $value, $name='') {
-        global $DB;
+        global $DB, $USER;
 
         $content = new stdClass();
         $content->fieldid = $this->field->id;
@@ -260,6 +260,9 @@ class data_field_textarea extends data_field_base {
             $draftitemid = file_get_submitted_draft_itemid('field_'. $this->field->id. '_itemid');
             $options = $this->get_options();
             $content->content = file_save_draft_area_files($draftitemid, $this->context->id, 'mod_data', 'content', $content->id, $options, $content->content);
+            $fs = get_file_storage();
+            $usercontext = context_user::instance($USER->id);
+            $fs->delete_area_files($usercontext->id, 'user', 'draft', $draftitemid);
         }
         $rv = $DB->update_record('data_content', $content);
         return $rv;
