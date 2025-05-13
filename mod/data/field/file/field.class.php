@@ -203,8 +203,9 @@ class data_field_file extends data_field_base {
         file_save_draft_area_files($value, $this->context->id, 'mod_data', 'content', $content->id);
 
         $usercontext = context_user::instance($USER->id);
-        $files = $fs->get_area_files($this->context->id, 'mod_data', 'content', $content->id, 'itemid, filepath, filename', false);
+        $fs->delete_area_files($usercontext->id, 'user', 'draft', $value);
 
+        $files = $fs->get_area_files($this->context->id, 'mod_data', 'content', $content->id, 'itemid, filepath, filename', false);
         // We expect no or just one file (maxfiles = 1 option is set for the form_filemanager).
         if (count($files) == 0) {
             $content->content = null;
