@@ -67,6 +67,9 @@ class question_edit_contexts {
      */
     public function __construct(\context $thiscontext) {
         $this->allcontexts = [$thiscontext];
+        if ($thiscontext->contextlevel == CONTEXT_COURSE) {
+            $this->allcontexts += array_values($thiscontext->get_child_contexts());
+        }
     }
 
     /**
