@@ -105,8 +105,8 @@ class get_state extends external_api {
         }
 
         foreach ($modinfo->cms as $cm) {
-            if ($cm->is_visible_on_course_page()) {
-                // Only return this course module data if it's visible by current user on the course page.
+            if ($cm->is_visible_on_course_page() || $cm->is_stealth()) {
+                // Only return this course module data if it's visible by current user on the course page or it's stealth.
                 $section = $sections[$cm->sectionnum];
                 $cmstate = new $cmclass($courseformat, $section, $cm, istrackeduser: $istrackeduser);
                 $result->cm[] = $cmstate->export_for_template($renderer);
