@@ -20,8 +20,13 @@ use core_xapi\handler;
 use core_xapi\xapi_exception;
 use Moodle\H5PFrameworkInterface;
 use Moodle\H5PCore;
+use h5plib_v127\local\library\handler as h5plibraryhandler;
 
 // phpcs:disable moodle.NamingConventions.ValidFunctionName.LowercaseMethod
+
+defined('MOODLE_INTERNAL') || die();
+
+h5plibraryhandler::register();
 
 /**
  * Moodle's implementation of the H5P framework interface.
