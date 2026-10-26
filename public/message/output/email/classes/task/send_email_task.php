@@ -57,7 +57,7 @@ class send_email_task extends scheduled_task {
      * Send out emails.
      */
     public function execute() {
-        global $DB, $PAGE, $SITE;
+        global $CFG, $DB, $PAGE, $SITE;
 
         // Get the maximum id we are going to use.
         // We use this as records may be added to the table while this task runs.
@@ -74,6 +74,16 @@ class send_email_task extends scheduled_task {
         $users = $this->get_unique_users();
         foreach ($users as $user) {
             \core\cron::setup_user($user);
+
+            // Check for an alternate email address in the user's messaging preferences.
+            if (!empty($CFG->messagingallowemailoverride)) {
+                $emailmessagingpreference = get_user_preferences('message_processor_email_email', null, $user);
+                $emailmessagingpreference = clean_param($emailmessagingpreference, PARAM_EMAIL);
+
+                if (!empty($emailmessagingpreference)) {
+                    $user->email = $emailmessagingpreference;
+                }
+            }
 
             $hascontent = false;
             $renderable = new \message_email\output\email_digest($user);
