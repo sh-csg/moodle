@@ -23,7 +23,7 @@
  */
 
 if (property_exists($CFG, 'dirroot') && !str_ends_with($CFG->dirroot, '/public')) {
-    $CFG->libdir = $CFG->libdir . '/lib';
+    $CFG->libdir = $CFG->dirroot . '/lib';
 }
 
 require_once(dirname(__DIR__) . '/public/lib/setup.php');
