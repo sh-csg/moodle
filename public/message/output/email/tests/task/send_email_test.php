@@ -30,6 +30,7 @@ require_once($CFG->dirroot . '/message/tests/messagelib_test.php');
  * @copyright 2019 Mark Nelson <markn@moodle.com>
  * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\message_email\task\send_email_task::class)]
 final class send_email_test extends \advanced_testcase {
 
     /**
@@ -133,5 +134,68 @@ final class send_email_test extends \advanced_testcase {
         $task = new send_email_task();
         $task->execute();
         $this->assertEquals(0, $sink->count());
+    }
+
+    /**
+     * Test sending email to an alternate email address.
+     */
+    public function test_sending_email_to_alternate_email(): void {
+        global $CFG;
+
+        $this->preventResetByRollback(); // Messaging is not compatible with transactions.
+
+        $this->resetAfterTest();
+
+        $CFG->messagingallowemailoverride = true;
+
+        // Create a course.
+        $course = $this->getDataGenerator()->create_course();
+
+        $user1 = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $user2 = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $email = 'alternate@email.com';
+
+        // Set an alternate email for user2.
+        set_user_preference('message_processor_email_email', $email, $user2);
+
+        // Create a group in the course.
+        $group1 = $this->getDataGenerator()->create_group(['courseid' => $course->id]);
+
+        groups_add_member($group1->id, $user1->id);
+        groups_add_member($group1->id, $user2->id);
+
+        $conversation = \core_message\api::create_conversation(
+            \core_message\api::MESSAGE_CONVERSATION_TYPE_GROUP,
+            [$user1->id, $user2->id],
+            'Group 1',
+            \core_message\api::MESSAGE_CONVERSATION_ENABLED,
+            'core_group',
+            'groups',
+            $group1->id,
+            \context_course::instance($course->id)->id
+        );
+
+        $message = new \core\message\message();
+        $message->courseid = $course->id;
+        $message->component = 'moodle';
+        $message->name = 'instantmessage';
+        $message->userfrom = $user1;
+        $message->convid = $conversation->id;
+        $message->subject = 'message subject';
+        $message->fullmessage = 'message body';
+        $message->fullmessageformat = FORMAT_MARKDOWN;
+        $message->fullmessagehtml = '<p>message body</p>';
+        $message->smallmessage = 'small message';
+        $message->notification = '0';
+
+        message_send($message);
+
+        $sink = $this->redirectEmails();
+        $this->assertEquals(0, $sink->count());
+        $task = new send_email_task();
+        $task->execute();
+        $this->assertEquals(1, $sink->count());
+        $this->assertEquals($email, $sink->get_messages()[0]->to);
+        $sink->close();
     }
 }
