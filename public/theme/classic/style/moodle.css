@@ -34045,7 +34045,11 @@ a.ygtvspacer:hover {
   color: #000;
 }
 .message-app .lazy-load-list {
-  overflow-y: inherit;
+  overflow-y: auto;
+}
+.message-app .conversationcontainer .section,
+.message-app .body-container .section {
+  max-height: calc(100vh - 50px);
 }
 
 #page-message-index #page-header {
@@ -34054,9 +34058,6 @@ a.ygtvspacer:hover {
 #page-message-index #region-main {
   height: 100%;
   margin-top: 0;
-}
-#page-message-index #region-main .conversationcontainer .section {
-  max-height: calc(100vh - 50px);
 }
 #page-message-index #region-main div[role=main] {
   height: 100%;

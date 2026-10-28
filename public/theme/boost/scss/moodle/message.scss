@@ -570,7 +570,13 @@ $message-day-color: color-contrast($message-app-bg) !default;
         color: $message-day-color;
     }
     .lazy-load-list {
-        overflow-y: inherit;
+        overflow-y: auto;
+    }
+    .conversationcontainer,
+    .body-container {
+        .section {
+            max-height: calc(100vh - 50px);
+        }
     }
 }
 #page-message-index {
@@ -580,11 +586,6 @@ $message-day-color: color-contrast($message-app-bg) !default;
     #region-main {
         height: 100%;
         margin-top: 0;
-        .conversationcontainer {
-            .section {
-                max-height: calc(100vh - 50px);
-            }
-        }
         div[role="main"] {
             height: 100%;
             #maincontent {
