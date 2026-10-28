@@ -95,7 +95,15 @@ if (!empty($role)) {
     }
 }
 
-$returnurl = new moodle_url('recipients.php', array('id' => $badge->id));
+if (has_capability('moodle/badges:viewawarded', $context)) {
+    $returnurl = new moodle_url('recipients.php', ['id' => $badge->id]);
+} else {
+    $returnurl = new moodle_url('index.php', ['type' => $badge->type]);
+    if ($badge->type == BADGE_TYPE_COURSE) {
+        $returnurl->param('id', $badge->courseid);
+    }
+}
+
 $returnlink = html_writer::link($returnurl, $strrecipients);
 $actionbar = new \core_badges\output\standard_action_bar(
     page: $PAGE,
