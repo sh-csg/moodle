@@ -314,7 +314,7 @@ define(['jquery', 'core/key_codes'], function($, keyCodes) {
             var innerHeight = element.innerHeight();
             var scrollHeight = element[0].scrollHeight;
 
-            if (scrollTop + innerHeight >= scrollHeight) {
+            if (Math.ceil(scrollTop) + Math.ceil(innerHeight) >= scrollHeight) {
                 triggerEvent(events.scrollBottom, e);
             }
         });
