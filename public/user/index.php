@@ -215,7 +215,7 @@ if ($participanttable->get_page_size() < $participanttable->totalrows) {
     echo html_writer::empty_tag('input', [
         'type' => 'button',
         'id' => 'checkall',
-        'class' => 'btn btn-secondary',
+        'class' => 'btn btn-secondary me-2 mb-3',
         'value' => $label,
         'data-target-page-size' => TABLE_SHOW_ALL_PAGE_SIZE,
     ]);
@@ -271,7 +271,7 @@ if ($context->id != $frontpagectx->id) {
 
 $selectactionparams = array(
     'id' => 'formactionid',
-    'class' => 'ms-2',
+    'class' => '',
     'data-action' => 'toggle',
     'data-togglegroup' => 'participants-table',
     'data-toggle' => 'action',
@@ -283,7 +283,7 @@ $select = html_writer::select($displaylist, 'formaction', '', ['' => 'choosedots
 echo html_writer::tag(
     'div',
     $label . $select,
-    ['class' => 'd-flex flex-wrap align-items-md-center gap-2 mb-3'],
+    ['class' => 'd-flex flex-wrap align-items-md-center gap-2 mb-3 me-2'],
 );
 
 echo '<input type="hidden" name="id" value="' . $course->id . '" />';
